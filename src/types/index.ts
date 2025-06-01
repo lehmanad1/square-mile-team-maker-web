@@ -1,6 +1,8 @@
 export interface Player {
+    id: string;
     name: string;
     attributes: number[];
+    selected: boolean;
 }
 
 export interface Team {
