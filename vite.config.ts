@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [vue()],
-  base: './',
+  base: './square-mile-team-maker-web',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
