@@ -86,14 +86,15 @@ export default defineComponent({
         .map(line => {
           const [name, ...attrs] = line.trim().split(',');
           return {
-            id: crypto.randomUUID(),
-            name,
+            id: Date.now() + Math.floor(Math.random() * 100000),
+            name: name,
             attributes: attrs.map(Number),
             selected: true,
-          };
+            assignedTeam: null,
+          } as Player;
         });
       playerList.value.push(...newPlayers);
-      localPlayerInput.value = '';
+    localPlayerInput.value = '';
       emit('update:players', playerList.value);
     };
 

@@ -14,69 +14,60 @@
       </div>
 
       <div class="results-container">
-        <PlayerList :players="playerList" class="player-list" />
+        <PlayerList class="player-list" />
         <TeamResults :teams="teams" :max-teams="maxTeams" class="team-results" />
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from 'vue';
+<script setup lang="ts">
+import { useStore } from 'vuex';
+import { ref } from 'vue';
 import TeamResults from './components/TeamResults.vue';
 import PlayerList from './components/PlayerList.vue';
 import TeamInput from './components/TeamInput.vue';
 import { generateTeams as generateTeamUtils } from './utils/teamGenerator';
 import { Player, TeamResult } from './types';
 
-export default defineComponent({
-  name: 'App',
-  components: {
-    TeamResults,
-    PlayerList,
-    TeamInput,
-  },
-  setup() {
-    const maxTeams = ref(2);
-    const maxPlayersPerTeam = ref(5);
-    const balanceType = ref('Most balanced teams');
-    const playerList = ref<Player[]>([]);
-    const teams = ref<TeamResult[]>([]);
+const store = useStore();
 
-    const updatePlayerList = (newPlayers: Player[]) => {
-      playerList.value = newPlayers;
-    };
+const maxTeams = ref(2);
+const maxPlayersPerTeam = ref(5);
+const balanceType = ref('Most balanced teams');
+const teams = ref<TeamResult[]>([]);
 
-    const handleGenerateTeams = ({ players, maxTeams, maxPlayersPerTeam, balanceType }) => {
-      teams.value = generateTeamUtils(
-        players,
-        maxTeams,
-        maxPlayersPerTeam,
-        balanceType
-      );
-    };
+const addPlayer = (playerData: { name: string; attributes: number[] }) => {
+  const player: Player = {
+    id: Date.now(),
+    name: playerData.name,
+    attributes: playerData.attributes,
+    selected: true,
+    assignedTeam: null
+  };
+  store.dispatch('addPlayer', player);
+};
 
-    const updateMaxTeams = (value: number) => {
-      maxTeams.value = value;
-    };
+const handleGenerateTeams = ({ players, maxTeams, maxPlayersPerTeam, balanceType }) => {
+  teams.value = generateTeamUtils(
+    players,
+    maxTeams,
+    maxPlayersPerTeam,
+    balanceType
+  );
+};
 
-    const updateMaxPlayersPerTeam = (value: number) => {
-      maxPlayersPerTeam.value = value;
-    };
+const updateMaxTeams = (value: number) => {
+  maxTeams.value = value;
+};
 
-    return {
-      maxTeams,
-      maxPlayersPerTeam,
-      balanceType,
-      playerList,
-      teams,
-      updatePlayerList,
-      handleGenerateTeams,
-      updateMaxTeams,
-      updateMaxPlayersPerTeam,
-    };
-  },
-});
+const updateMaxPlayersPerTeam = (value: number) => {
+  maxPlayersPerTeam.value = value;
+};
+
+const updatePlayerList = (players: Array<{ name: string; attributes: number[] }>) => {
+  players.forEach(player => addPlayer(player));
+};
 </script>
 
 <style>

@@ -63,8 +63,9 @@ function generateTeams(
                     teams[currentTeam].push(player);
                 }
             });
-        return teams.map(team => ({
-            players: team.map(player => player.name),
+        return teams.map((team, index) => ({
+            name: `Team ${index + 1}`,
+            players: team.map(x => { return {...x, assignedTeam: index}}),
             attributeScores: calculateTeamScore(team)
         }));
     }
@@ -134,7 +135,8 @@ function simulatedAnnealing(
         temperature *= coolingRate;
     }
 
-    return bestSolution.map((team: Player[]) => ({
+    return bestSolution.map((team: Player[], index: number) => ({
+        name: `Team ${index + 1}`,
         players: team.map((player: Player) => player.name),
         attributeScores: calculateTeamScore(team)
     }));

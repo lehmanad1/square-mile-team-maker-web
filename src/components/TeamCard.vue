@@ -1,22 +1,22 @@
 <template>
-  <div class="team">
-    <h3>Team {{ teamIndex + 1 }}</h3>
+  <div class="team-card" @dragover.prevent @drop="handleDrop">
+    <h3>{{ team?.name }}</h3>
     <ul class="attributes-list">
       <li v-if="team?.attributeScores" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
         Attr {{attrIndex + 1}}: {{ attr }}
       </li>
       <li v-else>No attributes yet</li>
     </ul>
-    <ul class="two-columns">
-      <li v-if="team?.players" v-for="player in team.players" :key="player">{{ player }}</li>
-      <li v-else>No players yet</li>
-    </ul>
+    <div class="two-columns">
+      <div v-if="team?.players" v-for="player in team.players" :key="player.id" draggable="true" @dragstart="startDrag($event, player)">test: {{ player }}</div>
+      <div v-else>No players yet</div>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { TeamResult } from '../types';
+import { TeamResult, Player } from '../types';
 
 export default defineComponent({
   name: 'TeamCard',
@@ -28,6 +28,31 @@ export default defineComponent({
     teamIndex: {
       type: Number,
       required: true,
+    },
+  },
+  emits: ['player-moved'],
+  methods: {
+    startDrag(event: DragEvent, player: Player) {
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('player', player.name);
+        event.dataTransfer.setData('sourceTeam', this?.team?.name ?? '');
+        event.dataTransfer.setData('source', 'team');
+      }
+    },
+    handleDrop(event: DragEvent) {
+      const player = event.dataTransfer?.getData('player');
+      const source = event.dataTransfer?.getData('source');
+      const sourceTeam = event.dataTransfer?.getData('sourceTeam');
+
+      if (!player) return;
+
+      this.$emit('player-moved', {
+        player,
+        source,
+        sourceTeam,
+        targetTeam: this?.team?.name
+      });
     },
   },
 });
@@ -81,5 +106,46 @@ li {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
+}
+
+.player {
+  cursor: grab;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.player.moving {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.player.entering {
+  animation: slide-in 0.3s ease forwards;
+}
+
+.player.leaving {
+  animation: slide-out 0.3s ease forwards;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
 }
 </style>

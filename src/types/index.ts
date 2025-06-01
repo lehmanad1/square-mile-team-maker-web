@@ -1,12 +1,14 @@
 export interface Player {
-    id: string;
-    name: string;
-    attributes: number[];
-    selected: boolean;
+  id: number;
+  name: string;
+  attributes: number[];
+  selected: boolean;
+  assignedTeam: number | null;
 }
 
 export interface Team {
-    players: Player[];
+  id: number;
+  players: Player[];
 }
 
 export interface TeamGenerationOptions {
@@ -16,6 +18,12 @@ export interface TeamGenerationOptions {
 }
 
 export interface TeamResult {
-    players: string[];
+    name: string;
+    players: Player[];
     attributeScores: number[];
+}
+
+export interface State {
+  players: Player[];
+  teams: Team[];
 }
