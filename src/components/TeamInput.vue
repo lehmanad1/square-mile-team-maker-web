@@ -1,13 +1,6 @@
 <template>
   <div class="team-input">
-    <h2>Team Input</h2>
-    <textarea 
-      :value="modelValue"
-      placeholder="Enter players and attributes (e.g., Player1,10,3,2,4)" 
-      rows="10"
-      @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
-    ></textarea>
-    
+    <h2>Team Generation Settings</h2>
     <div class="controls">
       <label for="maxTeams">Max Teams:</label>
       <input type="number" v-model.number="maxTeams" id="maxTeams" min="1" />
@@ -21,14 +14,29 @@
         <option value="Balanced but random">Balanced but random</option>
         <option value="Random">Random</option>
       </select>
+    </div>
 
-      <button @click="generateTeams">Generate Teams</button>
+    <textarea
+      v-model="localPlayerInput"
+      placeholder="Enter player names and attributes, one per line..."
+      rows="5"
+    ></textarea>
+    <div class="button-group">
+      <button @click="addPlayers" class="add-button">Add Players</button>
+      <button
+        @click="handleGenerateTeams"
+        :disabled="!canGenerateTeams"
+        class="generate-button"
+      >
+        Generate Teams
+      </button>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, computed, watch } from 'vue';
+import { Player } from '../types';
 
 export default defineComponent({
   name: 'TeamInput',
@@ -38,25 +46,75 @@ export default defineComponent({
       required: true,
       default: '',
     },
+    maxTeams: { type: Number, required: true },
+    maxPlayersPerTeam: { type: Number, required: true },
+    balanceType: { type: String, required: true },
   },
   emits: {
     'update:modelValue': (value: string) => true,
-    'generate-teams': (maxTeams: number, maxPlayers: number, balanceType: string) => true,
+    'generate-teams': (payload: {
+      players: Player[];
+      maxTeams: number;
+      maxPlayersPerTeam: number;
+      balanceType: string;
+    }) => true,
+    'update:players': (players: Player[]) => true,
+    'update:maxTeams': (value: number) => true,
+    'update:maxPlayersPerTeam': (value: number) => true,
   },
   setup(props, { emit }) {
-    const maxTeams = ref(2);
-    const maxPlayers = ref(5);
+    const maxTeams = ref(props.maxTeams);
+    const maxPlayers = ref(props.maxPlayersPerTeam);
     const balanceType = ref('Most balanced teams');
+    const localPlayerInput = ref('');
+    const playerList = ref<Player[]>([]);
 
-    const generateTeams = () => {
-      emit('generate-teams', maxTeams.value, maxPlayers.value, balanceType.value);
+    watch(maxTeams, (newValue) => {
+      emit('update:maxTeams', newValue);
+    });
+
+    watch(maxPlayers, (newValue) => {
+      emit('update:maxPlayersPerTeam', newValue);
+    });
+
+    const canGenerateTeams = computed(() => playerList.value.length > 0);
+
+    const addPlayers = () => {
+      const newPlayers = localPlayerInput.value
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => {
+          const [name, ...attrs] = line.trim().split(',');
+          return {
+            id: crypto.randomUUID(),
+            name,
+            attributes: attrs.map(Number),
+            selected: true,
+          };
+        });
+      playerList.value.push(...newPlayers);
+      localPlayerInput.value = '';
+      emit('update:players', playerList.value);
+    };
+
+    const handleGenerateTeams = () => {
+      const selectedPlayers = playerList.value.filter(p => p.selected);
+      emit('generate-teams', {
+        players: selectedPlayers,
+        maxTeams: maxTeams.value,
+        maxPlayersPerTeam: maxPlayers.value,
+        balanceType: props.balanceType,
+      });
     };
 
     return {
       maxTeams,
       maxPlayers,
       balanceType,
-      generateTeams,
+      localPlayerInput,
+      addPlayers,
+      handleGenerateTeams,
+      canGenerateTeams,
     };
   },
 });
@@ -106,5 +164,41 @@ select {
   padding: 5px;
   border: 1px solid #ddd;
   border-radius: 4px;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.add-button, .generate-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.add-button:hover {
+  background-color: #45a049;
+}
+
+.generate-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.generate-button:hover {
+  background-color: #45a049;
+}
+
+.generate-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 </style>

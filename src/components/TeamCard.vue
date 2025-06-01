@@ -1,33 +1,31 @@
 <template>
-  <div class="team-results">
-    <h2>Generated Teams</h2>
-    <div class="teams-grid">
-      <TeamCard
-        v-for="i in maxTeams"
-        :key="i"
-        :team="teams[i - 1]"
-        :teamIndex="i - 1"
-      />
-    </div>
+  <div class="team">
+    <h3>Team {{ teamIndex + 1 }}</h3>
+    <ul class="attributes-list">
+      <li v-if="team?.attributeScores" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
+        Attr {{attrIndex + 1}}: {{ attr }}
+      </li>
+      <li v-else>No attributes yet</li>
+    </ul>
+    <ul class="two-columns">
+      <li v-if="team?.players" v-for="player in team.players" :key="player">{{ player }}</li>
+      <li v-else>No players yet</li>
+    </ul>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { TeamResult } from '../types';
-import TeamCard from './TeamCard.vue';
 
 export default defineComponent({
-  name: 'TeamResults',
-  components: {
-    TeamCard,
-  },
+  name: 'TeamCard',
   props: {
-    teams: {
-      type: Array as () => TeamResult[],
-      required: true,
+    team: {
+      type: Object as () => TeamResult | null,
+      default: null,
     },
-    maxTeams: {
+    teamIndex: {
       type: Number,
       required: true,
     },
@@ -36,26 +34,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.team-results {
-  margin-top: 20px;
-}
-
-.team {
-  margin-bottom: 15px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  padding: 16px;
-  background-color: #f9f9f9;
-}
-
-h2 {
-  font-size: 24px;
-}
-
-h3 {
-  margin: 10px 0;
-  font-size: 20px;
-}
 
 .two-columns {
   display: grid;

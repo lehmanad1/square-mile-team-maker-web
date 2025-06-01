@@ -11,7 +11,6 @@ function calculateTeamScore(team: Player[]): number[] {
         scores[attrIndex] = team.reduce((sum, player) => 
             sum + player.attributes[attrIndex], 0);
     }
-    console.log(`Team score for ${team.map(p => p.name).join(', ')}: ${scores}`);
     return scores;
 }
 
@@ -32,7 +31,7 @@ function calculateVariance(teams: Player[][]): number {
 }
 
 function generateTeams(
-    players: string[], 
+    players: Player[], 
     maxTeams: number, 
     maxPlayersPerTeam: number, 
     balanceType: string,
@@ -44,22 +43,17 @@ function generateTeams(
         return seed - Math.floor(seed);
     };
 
-    const parsedPlayers: Player[] = players.map(player => {
-        const [name, ...attrs] = player.split(',');
-        return { name, attributes: attrs.map(Number) };
-    });
-
     if (balanceType === "Most balanced teams") {
-        return simulatedAnnealing(parsedPlayers, maxTeams, maxPlayersPerTeam, 1000, 0.99, random);
+        return simulatedAnnealing(players, maxTeams, maxPlayersPerTeam, 1000, 0.99, random);
     } 
     else if (balanceType === "Balanced but random") {
-        return simulatedAnnealing(parsedPlayers, maxTeams, maxPlayersPerTeam, 100, 0.8, random);
+        return simulatedAnnealing(players, maxTeams, maxPlayersPerTeam, 100, 0.8, random);
     } 
     else {
         // Random assignment
         const teams: Player[][] = Array.from({ length: maxTeams }, () => []);
         let currentTeam = 0;
-        [...parsedPlayers]
+        [...players]
             .sort(() => random() - 0.5)
             .forEach(player => {
                 if (teams[currentTeam].length < maxPlayersPerTeam) {
