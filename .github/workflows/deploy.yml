@@ -11,7 +11,7 @@ permissions:
   pages: write
 
 jobs:
-  build:
+   build:
     name: Build
     runs-on: ubuntu-latest
 
@@ -26,16 +26,7 @@ jobs:
         uses: bahmutov/npm-install@v1
 
       - name: Build project
-        run: |
-          mkdir -p dist
-          npm run build
-
-      - name: Debug Build Output
-        run: |
-          pwd
-          ls -la
-          echo "Dist directory contents:"
-          ls -la dist || echo "dist directory is empty"
+        run: npm run build
 
       - name: Upload production-ready build files
         uses: actions/upload-artifact@v4
@@ -47,6 +38,7 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Download artifact
