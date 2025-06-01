@@ -4,14 +4,16 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [vue()],
-  base: './square-mile-team-maker-web',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    assetsDir: 'assets',
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'public/index.html'),
       },
     },
+    copyPublicDir: true,
+    minify: true,
   },
 });
