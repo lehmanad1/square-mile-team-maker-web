@@ -1,5 +1,11 @@
 # Square Mile Team Maker Web
 
+## Author's Note
+This project is 97% vibe-coded in order to 
+- test github/copilot functionality in vscode
+- practice incorporating LLMs into my development workflow in a way that doesn't produce spaghetti code.
+
+## Bot's Note
 This project is a Vue.js application designed to help users generate balanced teams from a list of players and their attributes. The application allows users to input player data in CSV format, specify the number of teams, and choose the balancing criteria for team generation.
 
 ## Features
