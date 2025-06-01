@@ -36,8 +36,7 @@ square-mile-team-maker-web
 │   │   └── index.ts
 │   └── utils
 │       └── teamGenerator.ts
-├── public
-│   └── index.html
+├── index.html
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts

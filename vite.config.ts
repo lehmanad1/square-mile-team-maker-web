@@ -4,12 +4,5 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [vue()],
-  base: './square-mile-team-maker-web',
-  build: {
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'public/index.html'),
-      },
-    },
-  },
+  base: './square-mile-team-maker-web'
 });
