@@ -32,8 +32,8 @@ import { Player, TeamResult } from './types';
 
 const store = useStore();
 
-const maxTeams = ref(2);
-const maxPlayersPerTeam = ref(5);
+const maxTeams = ref(5);
+const maxPlayersPerTeam = ref(8);
 const balanceType = ref('Most balanced teams');
 const teams = ref<TeamResult[]>([]);
 
@@ -77,21 +77,26 @@ const updatePlayerList = (players: Array<{ name: string; attributes: number[] }>
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
-  padding: 0 20px;
+  margin-top: 20px;
+  padding: 0 10px;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .container {
-  max-width: 800px;
+  width: 100%;
   margin: 0 auto;
-  padding: 20px;
+  padding: 10px;
   background-color: #f9f9f9;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
 }
 
 .controls {
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+  padding: 0 5px;
 }
 
 .add-button .generate-button {
@@ -106,8 +111,37 @@ const updatePlayerList = (players: Array<{ name: string; attributes: number[] }>
 
 .results-container {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: minmax(120px, 1fr) minmax(200px, 2fr);
+  gap: 10px;
+  margin-top: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.player-list, .team-results {
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  #app {
+    margin-top: 60px;
+    padding: 0 20px;
+  }
+
+  .container {
+    max-width: 1200px;
+    padding: 20px;
+  }
+
+  .controls {
+    margin-bottom: 20px;
+    padding: 0;
+  }
+
+  .results-container {
+    gap: 20px;
+    margin-top: 20px;
+  }
 }
 </style>

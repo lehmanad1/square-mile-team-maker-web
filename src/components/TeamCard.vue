@@ -8,7 +8,7 @@
       <li v-else>No attributes yet</li>
     </ul>
     <div class="two-columns">
-      <div v-if="team?.players" v-for="player in team.players" :key="player.id" draggable="true" @dragstart="startDrag($event, player)">test: {{ player }}</div>
+      <div v-if="team?.players" v-for="player in team.players" :key="player.id" draggable="true" @dragstart="startDrag($event, player)">{{ player }}</div>
       <div v-else>No players yet</div>
     </div>
   </div>
@@ -60,52 +60,77 @@ export default defineComponent({
 
 <style scoped>
 
+h3 {
+    margin: 0;
+}
+
+.team-card {
+  padding: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 3px 0;
+}
+
+.attributes-list {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background-color: white;
+  margin-bottom: 8px;
+  overflow-y: auto;
+  max-height: 150px;
+}
+
+.attributes-list li {
+  width: 100%;
+  padding: 4px;
+  box-sizing: border-box;
+}
+
 .two-columns {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0px;
   padding: 8px;
   border: 1px solid #eee;
   border-radius: 4px;
   background-color: white;
 }
 
-.teams-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-}
-
-li {
-  padding: 4px 0;
-}
-
-.attributes-list {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 16px;
-  overflow-x: auto;
-  padding: 12px;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-  justify-content: center;
-  border: 1px solid #eee;
+.two-columns > div {
+  padding: 4px 8px;
+  background-color: #f5f5f5;
   border-radius: 4px;
-  background-color: white;
-  margin-bottom: 8px;
 }
 
-.attributes-list li {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
+@media (min-width: 768px) {
+  .attributes-list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-height: none;
+    padding: 12px;
+  }
+
+  .attributes-list li {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .two-columns {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    margin: 1px 0;
+  }
 }
 
 .player {
