@@ -1,11 +1,11 @@
 <template>
   <div class="team-results">
-    <h2>Generated Teams</h2>
+    <h2>Teams</h2>
     <div class="teams-grid">
       <TeamCard
         v-for="i in maxTeams"
         :key="i"
-        :team="teams[i - 1]"
+        :team="teams[i - 1] ?? {name: `Team ${i}`, players: [], attributeScores: []}"
         :teamIndex="i - 1"
       />
     </div>
@@ -37,7 +37,12 @@ export default defineComponent({
 
 <style scoped>
 .team-results {
-  margin-top: 20px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 0px;
+  background-color: #f9f9f9;
+  height: 100%;
+  text-align: left;
 }
 
 .team {
@@ -50,6 +55,7 @@ export default defineComponent({
 
 h2 {
   font-size: 24px;
+  padding-left: 10px;
 }
 
 h3 {
@@ -72,6 +78,10 @@ h3 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1px;
+  height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding-right: 8px;
+  box-sizing: border-box;
 }
 
 ul {

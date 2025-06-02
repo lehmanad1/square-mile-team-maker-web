@@ -44,6 +44,13 @@ export default createStore<State>({
     reorderPlayers(state, { fromIndex, toIndex }) {
       const [player] = state.players.splice(fromIndex, 1);
       state.players.splice(toIndex, 0, player);
+    },
+
+    updatePlayer(state, updatedPlayer: Player) {
+      const index = state.players.findIndex(p => p.id === updatedPlayer.id);
+      if (index !== -1) {
+        state.players[index] = updatedPlayer;
+      }
     }
   },
 
@@ -62,6 +69,9 @@ export default createStore<State>({
     },
     reorderPlayers({ commit }, { fromIndex, toIndex }) {
       commit('reorderPlayers', { fromIndex, toIndex });
+    },
+    updatePlayer({ commit }, player: Player) {
+      commit('updatePlayer', player);
     }
   },
 

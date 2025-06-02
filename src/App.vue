@@ -42,17 +42,17 @@ const addPlayer = (playerData: { name: string; attributes: number[] }) => {
     id: Date.now(),
     name: playerData.name,
     attributes: playerData.attributes,
-    selected: true,
+    selected: false,
     assignedTeam: null
   };
   store.dispatch('addPlayer', player);
 };
 
-const handleGenerateTeams = ({ players, maxTeams, maxPlayersPerTeam, balanceType }) => {
+const handleGenerateTeams = (balanceType: string) => {
   teams.value = generateTeamUtils(
-    players,
-    maxTeams,
-    maxPlayersPerTeam,
+    store.state.players.filter((p: Player) => p.selected),
+    maxTeams.value,
+    maxPlayersPerTeam.value,
     balanceType
   );
 };
@@ -131,7 +131,7 @@ const updatePlayerList = (players: Array<{ name: string; attributes: number[] }>
 
   .container {
     max-width: 1200px;
-    padding: 20px;
+    padding: 5px;
   }
 
   .controls {

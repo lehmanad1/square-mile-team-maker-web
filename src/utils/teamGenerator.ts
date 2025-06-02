@@ -43,26 +43,38 @@ function generateTeams(
         return seed - Math.floor(seed);
     };
 
+    // Shuffle players array
+    const shuffledPlayers = [...players].sort(() => random() - 0.5);
+
+    if(shuffledPlayers.some(player => player.attributes.length === 0)) {
+        console.warn("Some players have no attributes, falling back to random team generation.");
+    }
+
     if (balanceType === "Most balanced teams") {
-        return simulatedAnnealing(players, maxTeams, maxPlayersPerTeam, 1000, 0.99, random);
+        return simulatedAnnealing(shuffledPlayers, maxTeams, maxPlayersPerTeam, 1000, 0.99, random);
     } 
     else if (balanceType === "Balanced but random") {
-        return simulatedAnnealing(players, maxTeams, maxPlayersPerTeam, 100, 0.8, random);
+        return simulatedAnnealing(shuffledPlayers, maxTeams, maxPlayersPerTeam, 100, 0.6, random);
     } 
     else {
-        // Random assignment
+        // Random assignment with even distribution
         const teams: Player[][] = Array.from({ length: maxTeams }, () => []);
-        let currentTeam = 0;
-        [...players]
-            .sort(() => random() - 0.5)
-            .forEach(player => {
-                if (teams[currentTeam].length < maxPlayersPerTeam) {
-                    teams[currentTeam].push(player);
-                } else {
-                    currentTeam = (currentTeam + 1) % maxTeams;
-                    teams[currentTeam].push(player);
-                }
-            });
+        const playersPerTeam = Math.min(
+            Math.ceil(players.length / maxTeams),
+            maxPlayersPerTeam
+        );
+        
+        // Actually shuffle the players array this time
+        const shuffledPlayers = [...players].sort(() => random() - 0.5);
+        
+        // Distribute players evenly
+        shuffledPlayers.forEach((player, index) => {
+            const teamIndex = index % maxTeams;
+            if (teams[teamIndex].length < playersPerTeam) {
+                teams[teamIndex].push(player);
+            }
+        });
+
         return teams.map((team, index) => ({
             name: `Team ${index + 1}`,
             players: team.map(x => { return {...x, assignedTeam: index}}),
@@ -137,7 +149,7 @@ function simulatedAnnealing(
 
     return bestSolution.map((team: Player[], index: number) => ({
         name: `Team ${index + 1}`,
-        players: team.map((player: Player) => player.name),
+        players: team.map(x => { return {...x, assignedTeam: index}}),
         attributeScores: calculateTeamScore(team)
     }));
 }

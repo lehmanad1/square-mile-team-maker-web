@@ -1,6 +1,6 @@
 <template>
   <div class="player-list">
-    <h2>Added Players</h2>
+    <h2>All Players</h2>
     <div class="player-container" 
          @dragover.prevent 
          @drop="handleDrop">
@@ -15,9 +15,9 @@
         <input type="checkbox" 
                v-model="player.selected"
                :disabled="player.assignedTeam !== null"
-               @change="$emit('update:players', players)" />
-        <span :class="{ 'text-disabled': player.assignedTeam !== null }">
-          {{ player.name }} ({{ player.attributes.join(', ') }})
+               @change="(e) => handlePlayerSelection(player, e)" />
+        <span :class="['overflow-text-field', { 'text-disabled': player.assignedTeam !== null }]">
+          {{ player.name }}
         </span>
       </div>
       <div class="drop-indicator" ref="dropIndicator"></div>
@@ -83,13 +83,19 @@ const handleDrop = (event: DragEvent) => {
     dropIndicator.value.style.display = 'none';
   }
 };
+
+const handlePlayerSelection = (player: Player, event: Event) => {
+  const isChecked = (event.target as HTMLInputElement).checked;
+  var updatedPlayer: Player = { ...player, selected: isChecked };
+  store.dispatch('updatePlayer', { updatedPlayer });
+};
 </script>
 
 <style scoped>
 .player-list {
   border: 2px solid #ddd;
   border-radius: 8px;
-  padding: 16px;
+  padding: 0px;
   background-color: #f9f9f9;
   height: 100%;
 }
@@ -102,6 +108,7 @@ const handleDrop = (event: DragEvent) => {
   padding: 8px;
   border: 1px dashed #ccc;
   position: relative;
+  box-sizing: border-box;
 }
 
 .empty-state {
@@ -129,8 +136,8 @@ li {
   align-items: center;
   gap: 8px;
   cursor: grab;
-  padding: 8px;
-  margin: 4px;
+  padding: 5px 0px;
+  margin: 0px;
   border: 1px solid #ddd;
   border-radius: 4px;
   transition: all 0.3s ease;
@@ -178,8 +185,20 @@ input[type="checkbox"]:disabled {
   animation: slide-in 0.3s ease forwards;
 }
 
+.overflow-text-field {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .player-item.leaving {
   animation: slide-out 0.3s ease forwards;
+}
+
+h2 {
+  font-size: 24px;
+  padding-left: 10px;
 }
 
 @keyframes slide-in {

@@ -17,6 +17,7 @@
     </div>
 
     <textarea
+      class="player-input"
       v-model="localPlayerInput"
       placeholder="Enter player names and attributes, one per line..."
       rows="5"
@@ -52,12 +53,7 @@ export default defineComponent({
   },
   emits: {
     'update:modelValue': (value: string) => true,
-    'generate-teams': (payload: {
-      players: Player[];
-      maxTeams: number;
-      maxPlayersPerTeam: number;
-      balanceType: string;
-    }) => true,
+    'generate-teams': (balanceType: string) => true,
     'update:players': (players: Player[]) => true,
     'update:maxTeams': (value: number) => true,
     'update:maxPlayersPerTeam': (value: number) => true,
@@ -77,9 +73,10 @@ export default defineComponent({
       emit('update:maxPlayersPerTeam', newValue);
     });
 
-    const canGenerateTeams = computed(() => playerList.value.length > 0);
+    const canGenerateTeams = computed(() => true);
 
     const addPlayers = () => {
+      playerList.value = []
       const newPlayers = localPlayerInput.value
         .split('\n')
         .filter(line => line.trim())
@@ -95,17 +92,12 @@ export default defineComponent({
         });
       playerList.value.push(...newPlayers);
     localPlayerInput.value = '';
-      emit('update:players', playerList.value);
+    emit('update:players', playerList.value);
     };
 
     const handleGenerateTeams = () => {
       const selectedPlayers = playerList.value.filter(p => p.selected);
-      emit('generate-teams', {
-        players: selectedPlayers,
-        maxTeams: maxTeams.value,
-        maxPlayersPerTeam: maxPlayers.value,
-        balanceType: props.balanceType,
-      });
+      emit('generate-teams', balanceType.value);
     };
 
     return {
@@ -122,6 +114,15 @@ export default defineComponent({
 </script>
 
 <style scoped>
+
+.player-input {
+  width: 100%;
+  height: 100px;
+  margin: 10px 0px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
 .team-input {
   margin: 20px;
   text-align: left;

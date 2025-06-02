@@ -1,14 +1,14 @@
 <template>
   <div class="team-card" @dragover.prevent @drop="handleDrop">
-    <h3>{{ team?.name }}</h3>
+    <h3>{{ team?.name }}{{ team?.attributeScores && team?.attributeScores?.length > 0 ? ': '+team?.attributeScores : '' }}</h3>
     <ul class="attributes-list">
-      <li v-if="team?.attributeScores" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
+      <li v-if="team?.attributeScores && team?.attributeScores?.length > 0" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
         Attr {{attrIndex + 1}}: {{ attr }}
       </li>
       <li v-else>No attributes yet</li>
     </ul>
     <div class="two-columns">
-      <div v-if="team?.players" v-for="player in team.players" :key="player.id" draggable="true" @dragstart="startDrag($event, player)">{{ player }}</div>
+      <div v-if="team?.players && team?.players?.length > 0" v-for="player in team.players" :key="player.id" draggable="true" @dragstart="startDrag($event, player)">{{ player.name }}</div>
       <div v-else>No players yet</div>
     </div>
   </div>
