@@ -6,8 +6,12 @@
         v-for="team in teams"
         :key="team.id"
         :team="team"
+        :touch-state="touchState"
         @player-moved="handlePlayerMoved"
         @player-locked="handlePlayerLocked"
+        @touch-start="handleTouchStart"
+        @touch-move="(e) => $emit('touch-move', e)"
+        @touch-end="(e) => $emit('touch-end', e)"
       />
     </div>
   </div>
@@ -23,7 +27,7 @@ export default defineComponent({
   components: {
     TeamCard,
   },
-  emits: ['player-moved', 'player-locked'],
+  emits: ['player-moved', 'player-locked', 'touch-start', 'touch-move', 'touch-end'],
   props: {
     teams: {
       type: Array as () => TeamResult[],
@@ -33,8 +37,15 @@ export default defineComponent({
       type: Number,
       required: true,
     },
+    touchState: {
+      type: Object,
+      required: true
+    }
   },
   methods: {
+    handleTouchStart(event: TouchEvent, player: any, target: HTMLElement, source: string) {
+      this.$emit('touch-start', event, player, target, source);
+    },
     handlePlayerMoved({ playerId, targetTeamId }: { playerId: number, targetTeamId: number }) {
       this.$emit('player-moved', { playerId, targetTeamId });
     },

@@ -78,7 +78,8 @@ export default createStore<State>({
       const player = state.players.find(p => p.id.toString() === playerId.toString());
 
       if (player) {
-        if (player.lockedTeamId && player.lockedTeamId !== targetTeamId) {
+        if (player.lockedTeamId) {
+          console.warn('Player is locked', playerId);
           return;
         }
 
@@ -86,6 +87,7 @@ export default createStore<State>({
         player.assignedTeamId = targetTeamId;
 
         if(oldTeamId === targetTeamId) {
+          console.warn('Player is already in the target team', playerId, targetTeamId);
           return;
         }
 
@@ -105,6 +107,7 @@ export default createStore<State>({
           return team;
         });
       }
+      console.warn('Player not found', playerId, targetTeamId);
     },
 
     lockPlayer(state, { playerId, targetTeamId }) {
@@ -161,6 +164,7 @@ export default createStore<State>({
       commit('syncPlayerTeamAssignments');
     },
     addPlayerToTeam({ commit }, payload) {
+      console.log('Adding player to team:', payload);
       commit('addPlayerToTeam', payload);
       commit('syncPlayerTeamAssignments');
       commit('syncTeamAttributes');
@@ -182,6 +186,7 @@ export default createStore<State>({
       commit('syncTeamAttributes');
     },
     movePlayer({ commit }, { playerId, targetTeamId }: { playerId: number, targetTeamId: number }) {
+      console.log('moving player:', playerId, 'to team:', targetTeamId);
       commit('movePlayer', { playerId,  targetTeamId });
       commit('syncPlayerTeamAssignments');
       commit('syncTeamAttributes');

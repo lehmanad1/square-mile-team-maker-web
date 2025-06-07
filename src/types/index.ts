@@ -29,3 +29,16 @@ export interface State {
   players: Player[];
   teams: Team[];
 }
+
+export interface TouchState {
+  startX: number;
+  startY: number;
+  startTime: number;
+  isDragging: boolean;
+  draggedPlayer: Player | null;
+  draggedElement: HTMLElement | null;
+  sourceComponent: string | null;
+  elementX: number;
+  elementY: number;
+  elementWidth: number;
+}

@@ -1,7 +1,8 @@
 <template>
   <div class="player-list">
     <h2>All Players</h2>
-    <div class="player-container" 
+    <div class="player-container drop-zone" 
+         data-drop-zone="player-list"
          @dragover.prevent 
          @drop="handleDrop">
       <div class="select-all-container">
@@ -16,9 +17,13 @@
             :class="['player-item', { 'player-assigned': player.assignedTeamId !== null }]"
             :draggable="!player.assignedTeamId"
             :data-index="index"
+            :data-player-id="player.id"
             @dragstart="startDrag($event, player, index)"
             @dragenter.prevent="onDragEnter($event)"
-            @dragover.prevent>
+            @dragover.prevent
+            @touchstart="(e) => $emit('touch-start', e, player, e.target, 'playerList')"
+            @touchmove="(e) => $emit('touch-move', e)"
+            @touchend="(e) => $emit('touch-end', e)">
           <input type="checkbox" 
                 v-model="player.selected"
                 :disabled="player.assignedTeamId !== null"
@@ -42,6 +47,15 @@ const store = useStore();
 const players = computed(() => store.state.players);
 const dropIndicator = ref<HTMLElement | null>(null);
 let dragIndex = -1;
+
+defineProps({
+  touchState: {
+    type: Object,
+    required: true
+  }
+});
+
+defineEmits(['touch-start', 'touch-move', 'touch-end']);
 
 const startDrag = (event: DragEvent, player: Player, index: number) => {
   if (player.assignedTeamId) return;
@@ -73,7 +87,7 @@ const onDragEnter = (event: DragEvent) => {
 
 const handleDrop = (event: DragEvent) => {
   const source = event.dataTransfer?.getData('source');
-  
+  console.log('Drop source:', source);
   if (source === 'playerList') {
     const fromIndex = parseInt(event.dataTransfer?.getData('sourceIndex') || '-1');
     const target = event.target as HTMLElement;
@@ -82,9 +96,9 @@ const handleDrop = (event: DragEvent) => {
     if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
       store.dispatch('reorderPlayers', { fromIndex, toIndex });
     }
-  } else if (source === 'team') {
-    const playerId = event.dataTransfer?.getData('playerId');
-    store.dispatch('removePlayerFromTeam', playerId);
+  } else {
+    const playerId = parseInt(event.dataTransfer?.getData('playerId') ?? '-1');
+    store.dispatch('movePlayer', { playerId: playerId, targetTeamId: null } as { playerId: number, targetTeamId: number | null});
   }
   
   if (dropIndicator.value) {
@@ -131,6 +145,7 @@ const toggleSelectAll = (event: Event) => {
   border: 1px dashed #ccc;
   position: relative;
   box-sizing: border-box;
+  touch-action: pan-y pinch-zoom;
 }
 
 .empty-state {
@@ -164,6 +179,9 @@ li {
   border-radius: 4px;
   transition: all 0.3s ease;
   position: relative;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .player-assigned {
@@ -230,6 +248,21 @@ h2 {
   padding: 8px 0;
   margin-bottom: 8px;
   border-bottom: 1px solid #ddd;
+}
+
+.drop-zone {
+  position: relative;
+}
+
+.drop-zone::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  pointer-events: none;
 }
 
 @keyframes slide-in {

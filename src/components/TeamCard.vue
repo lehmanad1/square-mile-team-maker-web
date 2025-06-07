@@ -1,5 +1,10 @@
 <template>
-  <div class="team-card" @dragover.prevent @drop="handleDrop" draggable="false">
+  <div class="team-card" 
+      :data-team-id="team?.id"
+      @dragover.prevent 
+      @drop="handleDrop"
+      @touchend="(e) => $emit('touch-end', e)"
+      >
     <h3>{{ team?.name }}{{ team?.attributeScores && team?.attributeScores?.length > 0 ? ': '+team?.attributeScores : '' }}</h3>
     <ul class="attributes-list">
       <li v-if="team?.attributeScores && team?.attributeScores?.length > 0" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
@@ -8,10 +13,19 @@
       <li v-else>No attributes yet</li>
     </ul>
     <div class="two-columns">
-      <div v-if="team?.players && team?.players?.length > 0" v-for="player in team.players" :key="player.id" :draggable="canDrag(player)" @dragstart="startDrag($event, player)">
+      <div :data-player-id="player.id" 
+        v-if="team?.players && team?.players?.length > 0" 
+        v-for="player in team.players" 
+        :key="player.id" 
+        :draggable="canDrag(player)" 
+        @dragstart="startDrag($event, player)"
+        @touchstart="(e) => $emit('touch-start', e, player, e.target, 'teamCard')"
+        @touchmove="(e) => $emit('touch-move', e)"
+      >
         <input type="checkbox" 
           :checked="player?.lockedTeamId !== null"
-          @change="(e) => handlePlayerLock(player, e)" />
+          @change="(e) => handlePlayerLock(player, e)" 
+        />
         {{ player.name }}
       </div>
       <div v-else>No players yet</div>
@@ -29,9 +43,13 @@ export default defineComponent({
     team: {
       type: Object as () => TeamResult | null,
       default: null,
+    },
+    touchState: {
+      type: Object,
+      required: true
     }
   },
-  emits: ['player-moved', 'player-locked'],
+  emits: ['player-moved', 'player-locked', 'touch-start', 'touch-move', 'touch-end'],
   methods: {
     canDrag(player: Player): boolean {
       return player.lockedTeamId === null;
@@ -60,7 +78,7 @@ export default defineComponent({
         playerId: player.id,
         targetTeamId: targetTeamId
       });
-    }
+    },
   },
 });
 </script>
@@ -81,6 +99,13 @@ h3 {
   padding: 12px;
   margin: 4px;
   background: white;
+  touch-action: pan-y pinch-zoom;
+}
+
+[draggable="true"] {
+  touch-action:none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .attributes-list {

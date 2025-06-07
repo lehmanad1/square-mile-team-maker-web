@@ -15,13 +15,23 @@
       </div>
 
       <div class="results-container">
-        <PlayerList class="player-list" />
+        <PlayerList 
+          class="player-list"
+          :touch-state="touchState"
+          @touch-start="handleTouchStart"
+          @touch-move="handleTouchMove"
+          @touch-end="handleTouchEnd"
+        />
         <TeamResults 
-        class="team-results"
-        :teams="store.state.teams" 
-        :max-teams="maxTeams"  
-        @player-moved="handlePlayerMoved"
-        @player-locked="handlePlayerLocked"
+          class="team-results"
+          :teams="store.state.teams" 
+          :max-teams="maxTeams"
+          :touch-state="touchState"
+          @player-moved="handlePlayerMoved"
+          @player-locked="handlePlayerLocked"
+          @touch-start="handleTouchStart"
+          @touch-move="handleTouchMove"
+          @touch-end="handleTouchEnd"
         />
       </div>
     </div>
@@ -82,6 +92,129 @@ const handlePlayerMoved = ({ playerId, targetTeamId }: { playerId: number, targe
 
 const handlePlayerLocked = ({ playerId, targetTeamId }: { playerId: number, targetTeamId: number }) => {
   store.dispatch('lockPlayer', { playerId, targetTeamId });
+};
+
+const touchState = ref({
+  startX: 0,
+  startY: 0,
+  startTime: 0,
+  isDragging: false,
+  draggedPlayer: null as Player | null,
+  draggedElement: null as HTMLElement | null,
+  sourceComponent: null as string | null,
+  elementX: 0,
+  elementY: 0,
+  elementWidth: 0
+});
+
+const handleTouchStart = (event: TouchEvent, player: Player, element: HTMLElement, source: string) => {
+  if (player.lockedTeamId) return;
+  
+  const touch = event.touches[0];
+  const rect = element.getBoundingClientRect();
+  
+  touchState.value = {
+    startX: touch.clientX,
+    startY: touch.clientY,
+    startTime: Date.now(),
+    isDragging: true,
+    draggedPlayer: player,
+    draggedElement: element,
+    sourceComponent: source,
+    elementX: rect.left,
+    elementY: rect.top,
+    elementWidth: rect.width
+  };
+};
+
+const handleTouchMove = (event: TouchEvent) => {
+  if (!touchState.value.draggedPlayer || !touchState.value.draggedElement) return;
+  
+  const touch = event.touches[0];
+  const deltaX = touch.clientX - touchState.value.startX;
+  const deltaY = touch.clientY - touchState.value.startY;
+
+  if (touchState.value.isDragging) {
+    touchState.value.draggedElement.style.position = 'fixed';
+    touchState.value.draggedElement.style.width = `${touchState.value.elementWidth}px`;
+    touchState.value.draggedElement.style.zIndex = '1000';
+    touchState.value.draggedElement.style.left = `${touchState.value.elementX + deltaX}px`;
+    touchState.value.draggedElement.style.top = `${touchState.value.elementY + deltaY}px`;
+    event.preventDefault();
+  }
+};
+
+const handleTouchEnd = (event: TouchEvent) => {
+  if (!touchState.value.isDragging || !touchState.value.draggedPlayer){
+    console.warn('Touch end without dragging');
+    console.log(touchState.value);
+    return;
+  }
+
+  const touch = event.changedTouches[event.changedTouches.length - 1];
+  
+  // Temporarily hide dragged element to find element underneath
+  const draggedElement = touchState.value.draggedElement as HTMLElement;
+  const originalVisibility = draggedElement.style.visibility;
+  draggedElement.style.visibility = 'hidden';
+  
+  const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+  
+  // Restore visibility
+  draggedElement.style.visibility = originalVisibility;
+
+  // Look for drop zones
+  const dropZone = targetElement?.closest('[data-drop-zone]');
+  const dropZoneType = dropZone?.getAttribute('data-drop-zone');
+  const teamCard = targetElement?.closest('.team-card');
+
+  if (teamCard) {
+    const targetTeamId = parseInt(teamCard.getAttribute('data-team-id') || '0');
+    console.log('Touch end on team card', targetTeamId, touchState.value.draggedPlayer);
+    
+    if (targetTeamId) {
+      if (touchState.value.sourceComponent === 'playerList') {
+        store.dispatch('addPlayerToTeam', {
+          playerId: touchState.value.draggedPlayer.id,
+          teamId: targetTeamId
+        });
+      } else if (touchState.value.sourceComponent === 'teamCard') {
+        store.dispatch('movePlayer', {
+          playerId: touchState.value.draggedPlayer.id,
+          targetTeamId
+        });
+      }
+    }
+  }
+  else if (dropZoneType === 'player-list' && touchState.value.sourceComponent === 'teamCard') {
+    store.dispatch('removePlayerFromTeam', touchState.value.draggedPlayer.id);
+  }
+  else {
+    console.warn('No valid drop target found', dropZoneType);
+  }
+
+  // Reset element styling
+  if (touchState.value.draggedElement) {
+    touchState.value.draggedElement.style.position = '';
+    touchState.value.draggedElement.style.width = '';
+    touchState.value.draggedElement.style.zIndex = '';
+    touchState.value.draggedElement.style.left = '';
+    touchState.value.draggedElement.style.top = '';
+    touchState.value.draggedElement.style.transform = '';
+  }
+  
+  touchState.value = {
+    startX: 0,
+    startY: 0,
+    startTime: 0,
+    isDragging: false,
+    draggedPlayer: null,
+    draggedElement: null,
+    sourceComponent: null,
+    elementX: 0,
+    elementY: 0,
+    elementWidth: 0
+  };
 };
 
 // Save state to localStorage when it changes
