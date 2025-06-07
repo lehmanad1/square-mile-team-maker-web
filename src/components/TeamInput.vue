@@ -184,6 +184,7 @@ select {
 
 .button-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin: 10px 0;
 }
@@ -193,24 +194,8 @@ select {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-}
-
-.add-button {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.add-button:hover {
-  background-color: #45a049;
-}
-
-.generate-button {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.generate-button:hover {
-  background-color: #45a049;
+  flex: 1;
+  min-width: 120px;
 }
 
 .generate-button:disabled {

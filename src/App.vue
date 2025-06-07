@@ -125,7 +125,7 @@ onMounted(() => {
   text-align: center;
   color: #2c3e50;
   margin-top: 5px;
-  padding: 0 10px;
+  padding: 0 5px;
   width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
@@ -134,7 +134,7 @@ onMounted(() => {
 .container {
   width: 100%;
   margin: 0 auto;
-  padding: 10px;
+  padding: 5px;
   background-color: #f9f9f9;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);

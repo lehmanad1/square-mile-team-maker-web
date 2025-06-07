@@ -86,12 +86,25 @@ h3 {
 
 .teams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 8px;
   height: calc(100vh - 200px);
   overflow-y: auto;
-  padding-right: 8px;
+  padding: 8px;
   box-sizing: border-box;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .teams-grid {
+    grid-template-columns: 1fr;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .team-results {
+    padding: 0;
+  }
 }
 
 ul {

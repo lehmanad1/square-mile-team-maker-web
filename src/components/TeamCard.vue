@@ -76,6 +76,11 @@ h3 {
   box-sizing: border-box;
   width: 100%;
   margin: 3px 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 4px;
+  background: white;
 }
 
 .attributes-list {
@@ -137,6 +142,17 @@ h3 {
     grid-template-columns: repeat(2, 1fr);
     gap: 5px;
     margin: 1px 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .team-card {
+    padding: 8px;
+    margin: 2px;
+  }
+  
+  .player-list {
+    font-size: 0.9em;
   }
 }
 
