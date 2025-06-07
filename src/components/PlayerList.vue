@@ -140,12 +140,36 @@ const toggleSelectAll = (event: Event) => {
   min-height: 50px;
   height: calc(100vh - 200px);
   overflow-y: auto;
-  padding-right: 8px;
+  padding-right: 16px; /* Increased to accommodate wider scrollbar */
   padding: 8px;
   border: 1px dashed #ccc;
   position: relative;
   box-sizing: border-box;
   touch-action: pan-y pinch-zoom;
+  scrollbar-width: auto;
+  scrollbar-color: #666 #f1f1f1;
+}
+
+/* Webkit Scrollbar Styles */
+.player-container::-webkit-scrollbar {
+  width: 16px;
+  background: #f1f1f1;
+}
+
+.player-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.player-container::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 8px;
+  border: 3px solid #f1f1f1;
+  min-height: 40px;
+}
+
+.player-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .empty-state {

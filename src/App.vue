@@ -117,7 +117,7 @@ const handleTouchStart = (event: TouchEvent, player: Player, element: HTMLElemen
     startX: touch.clientX,
     startY: touch.clientY,
     startTime: Date.now(),
-    isDragging: true,
+    isDragging: false, // Changed from true to false
     draggedPlayer: player,
     draggedElement: element,
     sourceComponent: source,
@@ -133,6 +133,13 @@ const handleTouchMove = (event: TouchEvent) => {
   const touch = event.touches[0];
   const deltaX = touch.clientX - touchState.value.startX;
   const deltaY = touch.clientY - touchState.value.startY;
+  const timeDiff = Date.now() - touchState.value.startTime;
+
+  // Only start dragging after 500ms and if horizontal movement is greater than vertical
+  if (!touchState.value.isDragging && timeDiff > 500 && Math.abs(deltaY) < Math.abs(deltaX)) {
+    touchState.value.isDragging = true;
+    touchState.value.draggedElement.style.opacity = '0.5';
+  }
 
   if (touchState.value.isDragging) {
     touchState.value.draggedElement.style.position = 'fixed';

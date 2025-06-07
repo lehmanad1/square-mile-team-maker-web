@@ -104,6 +104,31 @@ h3 {
   padding: 8px;
   box-sizing: border-box;
   width: 100%;
+  padding-right: 16px;
+  scrollbar-width: thick;
+  scrollbar-color: #666 #f1f1f1;
+}
+
+/* Webkit Scrollbar Styles */
+.teams-grid::-webkit-scrollbar {
+  width: 16px;
+  background: #f1f1f1;
+}
+
+.teams-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.teams-grid::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 8px;
+  border: 3px solid #f1f1f1;
+  min-height: 40px;
+}
+
+.teams-grid::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 @media (max-width: 768px) {
