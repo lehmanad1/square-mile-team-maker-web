@@ -3,7 +3,8 @@ export interface Player {
   name: string;
   attributes: number[];
   selected: boolean;
-  assignedTeam: number | null;
+  assignedTeamId: number | null;
+  lockedTeamId: number | null;
 }
 
 export interface Team {
@@ -18,6 +19,7 @@ export interface TeamGenerationOptions {
 }
 
 export interface TeamResult {
+    id: number;
     name: string;
     players: Player[];
     attributeScores: number[];

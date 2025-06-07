@@ -37,121 +37,161 @@ function generateTeams(
     balanceType: string,
     seed: number = Math.random()
 ): TeamResult[] {
-    // Use the seed to initialize random decisions
     const random = () => {
         seed = Math.sin(seed * 10000) * 10000;
         return seed - Math.floor(seed);
     };
 
-    // Shuffle players array
-    const shuffledPlayers = [...players].sort(() => random() - 0.5);
+    // Initialize teams with locked players
+    const teams: Player[][] = Array.from({ length: maxTeams }, () => []);
+    const unassignedPlayers: Player[] = [];
 
-    if(shuffledPlayers.some(player => player.attributes.length === 0)) {
-        console.warn("Some players have no attributes, falling back to random team generation.");
-    }
+    // Pre-assign locked players
+    players.forEach(player => {
+        if (player.lockedTeamId && player.lockedTeamId <= maxTeams) {
+            const teamIndex = player.lockedTeamId - 1;
+            if (teams[teamIndex].length < maxPlayersPerTeam) {
+                teams[teamIndex].push({...player});
+            } else {
+                unassignedPlayers.push(player);
+            }
+        } else {
+            unassignedPlayers.push(player);
+        }
+    });
+
+    // Shuffle unassigned players
+    const shuffledUnassigned = [...unassignedPlayers].sort(() => random() - 0.5);
 
     if (balanceType === "Most balanced teams") {
-        return simulatedAnnealing(shuffledPlayers, maxTeams, maxPlayersPerTeam, 1000, 0.99, random);
+        return simulatedAnnealing(teams, shuffledUnassigned, maxTeams, maxPlayersPerTeam, 10000, 0.99, random);
     } 
     else if (balanceType === "Balanced but random") {
-        return simulatedAnnealing(shuffledPlayers, maxTeams, maxPlayersPerTeam, 100, 0.6, random);
+        return simulatedAnnealing(teams, shuffledUnassigned, maxTeams, maxPlayersPerTeam, 50, 0.6, random);
     } 
     else {
-        // Random assignment with even distribution
-        const teams: Player[][] = Array.from({ length: maxTeams }, () => []);
-        const playersPerTeam = Math.min(
-            Math.ceil(players.length / maxTeams),
-            maxPlayersPerTeam
-        );
-        
-        // Actually shuffle the players array this time
-        const shuffledPlayers = [...players].sort(() => random() - 0.5);
-        
-        // Distribute players evenly
-        shuffledPlayers.forEach((player, index) => {
-            const teamIndex = index % maxTeams;
-            if (teams[teamIndex].length < playersPerTeam) {
-                teams[teamIndex].push(player);
+        // Calculate minimum players per team and extras
+        const totalPlayers = shuffledUnassigned.length + teams.reduce((sum, team) => sum + team.length, 0);
+        const minPlayersPerTeam = Math.floor(totalPlayers / maxTeams);
+        const extraPlayers = totalPlayers % maxTeams;
+
+        // Distribute remaining players randomly while maintaining balance
+        shuffledUnassigned.forEach(player => {
+            const eligibleTeams = teams
+                .map((team, index) => ({ 
+                    index, 
+                    size: team.length,
+                    targetSize: Math.min(
+                        maxPlayersPerTeam,
+                        minPlayersPerTeam + (index < extraPlayers ? 1 : 0)
+                    )
+                }))
+                .filter(t => t.size < t.targetSize);
+
+            if (eligibleTeams.length > 0) {
+                const randomTeam = eligibleTeams[Math.floor(random() * eligibleTeams.length)];
+                teams[randomTeam.index].push(player);
             }
         });
 
         return teams.map((team, index) => ({
+            id: index + 1,
             name: `Team ${index + 1}`,
-            players: team.map(x => { return {...x, assignedTeam: index}}),
+            players: team.map(x => ({ ...x, assignedTeam: index + 1 })),
             attributeScores: calculateTeamScore(team)
         }));
     }
 }
 
-// Update simulatedAnnealing signature to accept the random function
 function simulatedAnnealing(
-    players: Player[], 
-    maxTeams: number, 
-    maxPlayersPerTeam: number, 
+    initialTeams: Player[][],
+    unassignedPlayers: Player[],
+    maxTeams: number,
+    maxPlayersPerTeam: number,
     iterations: number,
     coolingRate: number,
     random: () => number
 ): TeamResult[] {
-    let currentSolution: Player[][] = Array.from({ length: maxTeams }, () => []);
+    // Initialize solution with existing teams
+    let currentSolution = initialTeams.map(team => [...team]);
     
-    // Initial random assignment
-    [...players].sort(() => random() - 0.5).forEach((player, index) => {
-        const teamIndex = index % maxTeams;
-        if (currentSolution[teamIndex].length < maxPlayersPerTeam) {
-            currentSolution[teamIndex].push(player);
+    // Calculate minimum players per team and extras
+    const totalPlayers = unassignedPlayers.length + currentSolution.reduce((sum, team) => sum + team.length, 0);
+    const minPlayersPerTeam = Math.floor(totalPlayers / maxTeams);
+    const extraPlayers = totalPlayers % maxTeams;
+
+    // Add unassigned players to teams evenly
+    unassignedPlayers.forEach(player => {
+        // Find teams eligible for another player
+        const eligibleTeams = currentSolution
+            .map((team, index) => ({ 
+                index, 
+                size: team.length,
+                targetSize: minPlayersPerTeam + (index < extraPlayers ? 1 : 0)
+            }))
+            .filter(t => t.size < t.targetSize && t.size < maxPlayersPerTeam);
+
+        if (eligibleTeams.length > 0) {
+            const randomTeam = eligibleTeams[Math.floor(random() * eligibleTeams.length)];
+            currentSolution[randomTeam.index].push(player);
         }
     });
 
     let currentVariance = calculateVariance(currentSolution);
-    let bestSolution = JSON.parse(JSON.stringify(currentSolution));
+    let bestSolution = currentSolution;
     let bestVariance = currentVariance;
-    let temperature = 100.0; // Increased initial temperature
+    let temperature = 100.0;
 
     for (let i = 0; i < iterations; i++) {
-        // Try multiple swaps per iteration
         for (let j = 0; j < 3; j++) {
-            const newSolution = JSON.parse(JSON.stringify(currentSolution));
+            const newSolution = currentSolution;
             
-            // Swap two random players between teams
-            const team1 = Math.floor(random() * maxTeams);
-            const team2 = Math.floor(random() * maxTeams);
+            // Find teams with unlocked players
+            const teamsWithUnlockedPlayers = newSolution
+                .map((team, index) => ({
+                    index,
+                    unlockedPlayers: team.filter(p => p?.lockedTeamId === null)
+                }))
+                .filter(t => t.unlockedPlayers.length > 0);
             
-            if (newSolution[team1].length > 0 && newSolution[team2].length > 0) {
-                const player1Index = Math.floor(random() * newSolution[team1].length);
-                const player2Index = Math.floor(random() * newSolution[team2].length);
+            if (teamsWithUnlockedPlayers.length >= 2) {
+                // Select two random teams with unlocked players
+                const team1Info = teamsWithUnlockedPlayers[Math.floor(random() * teamsWithUnlockedPlayers.length)];
+                const team2Info = teamsWithUnlockedPlayers[Math.floor(random() * teamsWithUnlockedPlayers.length)];
                 
-                // Swap players between teams
-                const player1 = newSolution[team1][player1Index];
-                const player2 = newSolution[team2][player2Index];
-                
-                newSolution[team1][player1Index] = player2;
-                newSolution[team2][player2Index] = player1;
-                
-                const newVariance = calculateVariance(newSolution);
-                
-                // Modified acceptance probability
-                const acceptanceProbability = Math.exp(-Math.abs(newVariance - currentVariance) / temperature);
-                
-                if (newVariance < bestVariance) {
-                    bestSolution = JSON.parse(JSON.stringify(newSolution));
-                    bestVariance = newVariance;
-                    currentSolution = newSolution;
-                    currentVariance = newVariance;
-                } else if (random() < acceptanceProbability) {
-                    currentSolution = newSolution;
-                    currentVariance = newVariance;
+                if (team1Info.index !== team2Info.index) {
+                    // Swap random unlocked players
+                    const player1Index = newSolution[team1Info.index].findIndex(p =>  p?.lockedTeamId === null);
+                    const player2Index = newSolution[team2Info.index].findIndex(p =>  p?.lockedTeamId === null);
+                    
+                    const temp = newSolution[team1Info.index][player1Index];
+                    newSolution[team1Info.index][player1Index] = newSolution[team2Info.index][player2Index];
+                    newSolution[team2Info.index][player2Index] = temp;
+                    
+                    const newVariance = calculateVariance(newSolution);
+                    const acceptanceProbability = Math.exp(-Math.abs(newVariance - currentVariance) / temperature);
+                    
+                    if (newVariance < bestVariance) {
+                        bestSolution = JSON.parse(JSON.stringify(newSolution));
+                        bestVariance = newVariance;
+                        currentSolution = newSolution;
+                        currentVariance = newVariance;
+                    } else if (random() < acceptanceProbability) {
+                        currentSolution = newSolution;
+                        currentVariance = newVariance;
+                    }
                 }
             }
         }
-        
         temperature *= coolingRate;
     }
 
-    return bestSolution.map((team: Player[], index: number) => ({
+    return bestSolution.map((team, index) => ({
+        id: index + 1,
         name: `Team ${index + 1}`,
-        players: team.map(x => { return {...x, assignedTeam: index}}),
+        players: team.map(x => ({ ...x, assignedTeam: index + 1 })),
         attributeScores: calculateTeamScore(team)
     }));
 }
 
-export { generateTeams };
+export { generateTeams, calculateTeamScore };

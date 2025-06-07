@@ -4,21 +4,29 @@
     <div class="player-container" 
          @dragover.prevent 
          @drop="handleDrop">
-      <div v-for="(player, index) in players" 
-           :key="player.id" 
-           :class="['player-item', { 'player-assigned': player.assignedTeam !== null }]"
-           :draggable="!player.assignedTeam"
-           :data-index="index"
-           @dragstart="startDrag($event, player, index)"
-           @dragenter.prevent="onDragEnter($event)"
-           @dragover.prevent>
+      <div class="select-all-container">
         <input type="checkbox" 
-               v-model="player.selected"
-               :disabled="player.assignedTeam !== null"
-               @change="(e) => handlePlayerSelection(player, e)" />
-        <span :class="['overflow-text-field', { 'text-disabled': player.assignedTeam !== null }]">
-          {{ player.name }}
-        </span>
+               :checked="allSelectablePlayersSelected"
+               @change="toggleSelectAll" />
+        <span>Select All</span>
+      </div>
+      <div v-for="(player, index) in players">
+        <div v-if="!player.assignedTeamId" class="empty-state"
+            :key="player.id"
+            :class="['player-item', { 'player-assigned': player.assignedTeamId !== null }]"
+            :draggable="!player.assignedTeamId"
+            :data-index="index"
+            @dragstart="startDrag($event, player, index)"
+            @dragenter.prevent="onDragEnter($event)"
+            @dragover.prevent>
+          <input type="checkbox" 
+                v-model="player.selected"
+                :disabled="player.assignedTeamId !== null"
+                @change="(e) => handlePlayerSelection(player, e)" />
+          <span :class="['overflow-text-field', { 'text-disabled': player.assignedTeamId !== null }]">
+            {{ player.name }}
+          </span>
+        </div>
       </div>
       <div class="drop-indicator" ref="dropIndicator"></div>
     </div>
@@ -36,7 +44,7 @@ const dropIndicator = ref<HTMLElement | null>(null);
 let dragIndex = -1;
 
 const startDrag = (event: DragEvent, player: Player, index: number) => {
-  if (player.assignedTeam) return;
+  if (player.assignedTeamId) return;
   dragIndex = index;
   
   if (event.dataTransfer) {
@@ -88,6 +96,20 @@ const handlePlayerSelection = (player: Player, event: Event) => {
   const isChecked = (event.target as HTMLInputElement).checked;
   var updatedPlayer: Player = { ...player, selected: isChecked };
   store.dispatch('updatePlayer', { updatedPlayer });
+};
+
+const allSelectablePlayersSelected = computed(() => {
+  const selectablePlayers = players.value.filter(p => !p.assignedTeamId);
+  return selectablePlayers.length > 0 && selectablePlayers.every(p => p.selected);
+});
+
+const toggleSelectAll = (event: Event) => {
+  const isChecked = (event.target as HTMLInputElement).checked;
+  (players.value as Player[])
+    .filter(p => !p.assignedTeamId)
+    .forEach(player => {
+      store.dispatch('updatePlayer', { ...player, selected: isChecked });
+    });
 };
 </script>
 
@@ -199,6 +221,15 @@ input[type="checkbox"]:disabled {
 h2 {
   font-size: 24px;
   padding-left: 10px;
+}
+
+.select-all-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #ddd;
 }
 
 @keyframes slide-in {

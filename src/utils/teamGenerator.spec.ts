@@ -1,13 +1,15 @@
 import { generateTeams } from './teamGenerator';
 import { Player, TeamResult } from '../types';
 
-const createTestPlayer = (playerData: string): Player => {
+const createTestPlayer = (playerData: string, index:number): Player => {
     const [name, ...attrs] = playerData.split(',');
     return {
-        id: `test-${name}`,
+        id: index+1,
         name,
         attributes: attrs.map(Number),
         selected: true,
+        assignedTeamId: null,
+        lockedTeamId: null
     };
 };
 
@@ -22,7 +24,7 @@ const testPlayers: Player[] = [
     'Player8,3,1,9,7',
     'Player9,2,0,8,6',
     'Player10,1,9,7,5'
-].map(createTestPlayer);
+].map((p,index) => createTestPlayer(p, index));
 
 describe('Team Generator', () => {
     test('should respect max teams and players per team limits', () => {

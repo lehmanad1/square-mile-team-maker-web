@@ -3,10 +3,11 @@
     <h2>Teams</h2>
     <div class="teams-grid">
       <TeamCard
-        v-for="i in maxTeams"
-        :key="i"
-        :team="teams[i - 1] ?? {name: `Team ${i}`, players: [], attributeScores: []}"
-        :teamIndex="i - 1"
+        v-for="team in teams"
+        :key="team.id"
+        :team="team"
+        @player-moved="handlePlayerMoved"
+        @player-locked="handlePlayerLocked"
       />
     </div>
   </div>
@@ -22,6 +23,7 @@ export default defineComponent({
   components: {
     TeamCard,
   },
+  emits: ['player-moved', 'player-locked'],
   props: {
     teams: {
       type: Array as () => TeamResult[],
@@ -32,6 +34,14 @@ export default defineComponent({
       required: true,
     },
   },
+  methods: {
+    handlePlayerMoved({ playerId, targetTeamId }: { playerId: number, targetTeamId: number }) {
+      this.$emit('player-moved', { playerId, targetTeamId });
+    },
+    handlePlayerLocked({ playerId, targetTeamId }: { playerId: number, targetTeamId: number }) {
+      this.$emit('player-locked', { playerId, targetTeamId });
+    },
+  }
 });
 </script>
 

@@ -23,7 +23,8 @@
       rows="5"
     ></textarea>
     <div class="button-group">
-      <button @click="addPlayers" class="add-button">Add Players</button>
+      <button @click="handleAddPlayers" class="add-button">Add Players</button>
+      <button @click="handleRemoveAllPlayers" class="add-button">Remove All Players</button>
       <button
         @click="handleGenerateTeams"
         :disabled="!canGenerateTeams"
@@ -31,6 +32,7 @@
       >
         Generate Teams
       </button>
+      <button @click="handleResetTeams" class="add-button">Reset Teams</button>
     </div>
   </div>
 </template>
@@ -57,6 +59,8 @@ export default defineComponent({
     'update:players': (players: Player[]) => true,
     'update:maxTeams': (value: number) => true,
     'update:maxPlayersPerTeam': (value: number) => true,
+    'reset-teams': () => true,
+    'remove-all-players': () => true,
   },
   setup(props, { emit }) {
     const maxTeams = ref(props.maxTeams);
@@ -75,7 +79,7 @@ export default defineComponent({
 
     const canGenerateTeams = computed(() => true);
 
-    const addPlayers = () => {
+    const handleAddPlayers = () => {
       playerList.value = []
       const newPlayers = localPlayerInput.value
         .split('\n')
@@ -87,7 +91,7 @@ export default defineComponent({
             name: name,
             attributes: attrs.map(Number),
             selected: true,
-            assignedTeam: null,
+            assignedTeamId: null,
           } as Player;
         });
       playerList.value.push(...newPlayers);
@@ -100,13 +104,23 @@ export default defineComponent({
       emit('generate-teams', balanceType.value);
     };
 
+    const handleResetTeams = () => {
+      emit('reset-teams');
+    };
+
+    const handleRemoveAllPlayers = () => {
+      emit('remove-all-players');
+    };
+
     return {
       maxTeams,
       maxPlayers,
       balanceType,
       localPlayerInput,
-      addPlayers,
+      handleAddPlayers,
+      handleResetTeams,
       handleGenerateTeams,
+      handleRemoveAllPlayers,
       canGenerateTeams,
     };
   },

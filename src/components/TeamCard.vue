@@ -1,5 +1,5 @@
 <template>
-  <div class="team-card" @dragover.prevent @drop="handleDrop">
+  <div class="team-card" @dragover.prevent @drop="handleDrop" draggable="false">
     <h3>{{ team?.name }}{{ team?.attributeScores && team?.attributeScores?.length > 0 ? ': '+team?.attributeScores : '' }}</h3>
     <ul class="attributes-list">
       <li v-if="team?.attributeScores && team?.attributeScores?.length > 0" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
@@ -8,7 +8,12 @@
       <li v-else>No attributes yet</li>
     </ul>
     <div class="two-columns">
-      <div v-if="team?.players && team?.players?.length > 0" v-for="player in team.players" :key="player.id" draggable="true" @dragstart="startDrag($event, player)">{{ player.name }}</div>
+      <div v-if="team?.players && team?.players?.length > 0" v-for="player in team.players" :key="player.id" :draggable="canDrag(player)" @dragstart="startDrag($event, player)">
+        <input type="checkbox" 
+          :checked="player?.lockedTeamId !== null"
+          @change="(e) => handlePlayerLock(player, e)" />
+        {{ player.name }}
+      </div>
       <div v-else>No players yet</div>
     </div>
   </div>
@@ -24,36 +29,38 @@ export default defineComponent({
     team: {
       type: Object as () => TeamResult | null,
       default: null,
-    },
-    teamIndex: {
-      type: Number,
-      required: true,
-    },
+    }
   },
-  emits: ['player-moved'],
+  emits: ['player-moved', 'player-locked'],
   methods: {
+    canDrag(player: Player): boolean {
+      return player.lockedTeamId === null;
+    },
     startDrag(event: DragEvent, player: Player) {
       if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('player', player.name);
-        event.dataTransfer.setData('sourceTeam', this?.team?.name ?? '');
         event.dataTransfer.setData('source', 'team');
+        event.dataTransfer.setData('playerId', player.id.toString());
       }
     },
     handleDrop(event: DragEvent) {
-      const player = event.dataTransfer?.getData('player');
-      const source = event.dataTransfer?.getData('source');
-      const sourceTeam = event.dataTransfer?.getData('sourceTeam');
+      const playerId = event.dataTransfer?.getData('playerId');
 
-      if (!player) return;
-
+      if (!playerId) return;
+      
       this.$emit('player-moved', {
-        player,
-        source,
-        sourceTeam,
-        targetTeam: this?.team?.name
+        playerId,
+        targetTeamId: this?.team?.id
       });
     },
+    handlePlayerLock(player: Player, event: Event) {
+      const targetTeamId = ((event.target as HTMLInputElement).checked ? this?.team?.id : null) ?? null;
+      player.lockedTeamId = targetTeamId;
+      this.$emit('player-locked', {
+        playerId: player.id,
+        targetTeamId: targetTeamId
+      });
+    }
   },
 });
 </script>
