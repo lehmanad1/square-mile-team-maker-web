@@ -10,8 +10,9 @@
 
       <label for="teamBalance">Team Balance Type:</label>
       <select v-model="balanceType" id="teamBalance">
-        <option value="Most balanced teams">Most balanced teams</option>
         <option value="Balanced but random">Balanced but random</option>
+        <option value="Most balanced teams">Most balanced teams</option>
+        <option value="Not very balanced">Not very balanced</option>
         <option value="Random">Random</option>
       </select>
     </div>
@@ -65,7 +66,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const maxTeams = ref(props.maxTeams);
     const maxPlayers = ref(props.maxPlayersPerTeam);
-    const balanceType = ref('Most balanced teams');
+    const balanceType = ref(props.balanceType);
     const localPlayerInput = ref('');
     const playerList = ref<Player[]>([]);
 

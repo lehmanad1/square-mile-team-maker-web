@@ -1,6 +1,7 @@
 <template>
   <div class="team-results">
     <h2>Teams</h2>
+    <div v-if="teams.some(x=>x.players.length>0)" class="variance-text">Total Variance: {{ totalVariance.toFixed(2) }}</div>
     <div class="teams-grid">
       <TeamCard
         v-for="team in teams"
@@ -21,6 +22,7 @@
 import { defineComponent } from 'vue';
 import { TeamResult } from '../types';
 import TeamCard from './TeamCard.vue';
+import { calculateVariance } from '../utils/teamGenerator';
 
 export default defineComponent({
   name: 'TeamResults',
@@ -40,6 +42,11 @@ export default defineComponent({
     touchState: {
       type: Object,
       required: true
+    }
+  },
+  computed: {
+    totalVariance(): number {
+      return calculateVariance(this.teams.map(team => team.players));
     }
   },
   methods: {
@@ -172,5 +179,12 @@ li {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
+}
+
+.variance-text {
+  font-size: 14px;
+  color: #666;
+  padding-left: 12px;
+  margin-bottom: 8px;
 }
 </style>

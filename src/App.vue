@@ -50,7 +50,7 @@ const store = useStore();
 
 const maxTeams = ref(5);
 const maxPlayersPerTeam = ref(8);
-const balanceType = ref('Most balanced teams');
+const balanceType = ref('Balanced but random');
 const addPlayer = (playerData: { name: string; attributes: number[] }, index: number) => {
   const player: Player = {
     id: index,

@@ -30,6 +30,44 @@ function calculateVariance(teams: Player[][]): number {
     }, 0);
 }
 
+function findBestSwapCandidates(team1: Player[], team2: Player[]): [number, number] {
+    let bestDiff = Infinity;
+    let bestBalance = Infinity;
+    let bestIndices: [number, number] = [0, 0];
+
+    const team1Total = calculateTeamScore(team1);
+    const team2Total = calculateTeamScore(team2);
+
+    team1.forEach((p1, i) => {
+        if (p1.lockedTeamId === null) {
+            team2.forEach((p2, j) => {
+                if (p2.lockedTeamId === null) {
+                    // Calculate how this swap would affect team balance
+                    const p1Score = p1.attributes.reduce((sum, val) => sum + val, 0);
+                    const p2Score = p2.attributes.reduce((sum, val) => sum + val, 0);
+                    
+                    // Simulate the swap
+                    const newTeam1Total = team1Total.map((score, idx) => 
+                        score - p1.attributes[idx] + p2.attributes[idx]);
+                    const newTeam2Total = team2Total.map((score, idx) => 
+                        score - p2.attributes[idx] + p1.attributes[idx]);
+                    
+                    // Calculate how close this gets us to perfect balance
+                    const balance = newTeam1Total.reduce((sum, score, idx) => 
+                        sum + Math.abs(score - newTeam2Total[idx]), 0);
+
+                    if (balance < bestBalance) {
+                        bestBalance = balance;
+                        bestIndices = [i, j];
+                    }
+                }
+            });
+        }
+    });
+
+    return bestIndices;
+}
+
 function generateTeams(
     players: Player[], 
     maxTeams: number, 
@@ -64,11 +102,16 @@ function generateTeams(
     const shuffledUnassigned = [...unassignedPlayers].sort(() => random() - 0.5);
 
     if (balanceType === "Most balanced teams") {
-        return simulatedAnnealing(teams, shuffledUnassigned, maxTeams, maxPlayersPerTeam, 10000, 0.99, random);
+        return simulatedAnnealing(teams, shuffledUnassigned, maxTeams, maxPlayersPerTeam, 10000, 0.995, 0.01, random);
     } 
     else if (balanceType === "Balanced but random") {
-        return simulatedAnnealing(teams, shuffledUnassigned, maxTeams, maxPlayersPerTeam, 50, 0.6, random);
+        console.log("Using balanced but random strategy");
+        return simulatedAnnealing(teams, shuffledUnassigned, maxTeams, maxPlayersPerTeam, 100, 0.35, 10.0, random);
     } 
+    else if (balanceType === "Not very balanced"){
+        return simulatedAnnealing(teams, shuffledUnassigned, maxTeams, maxPlayersPerTeam, 5, 0.1, 10.0, random);
+
+    }
     else {
         // Calculate minimum players per team and extras
         const totalPlayers = shuffledUnassigned.length + teams.reduce((sum, team) => sum + team.length, 0);
@@ -110,6 +153,7 @@ function simulatedAnnealing(
     maxPlayersPerTeam: number,
     iterations: number,
     coolingRate: number,
+    varianceThreshold: number,
     random: () => number
 ): TeamResult[] {
     // Initialize solution with existing teams
@@ -138,13 +182,16 @@ function simulatedAnnealing(
     });
 
     let currentVariance = calculateVariance(currentSolution);
-    let bestSolution = currentSolution;
+    let bestSolution = deepCopyTeams(currentSolution);
     let bestVariance = currentVariance;
     let temperature = 100.0;
 
     for (let i = 0; i < iterations; i++) {
+        if (bestVariance < varianceThreshold) {
+            break;
+        }
         for (let j = 0; j < 3; j++) {
-            const newSolution = currentSolution;
+            const newSolution = [ ...currentSolution];
             
             // Find teams with unlocked players
             const teamsWithUnlockedPlayers = newSolution
@@ -156,42 +203,57 @@ function simulatedAnnealing(
             
             if (teamsWithUnlockedPlayers.length >= 2) {
                 // Select two random teams with unlocked players
-                const team1Info = teamsWithUnlockedPlayers[Math.floor(random() * teamsWithUnlockedPlayers.length)];
-                const team2Info = teamsWithUnlockedPlayers[Math.floor(random() * teamsWithUnlockedPlayers.length)];
+                const chosenTeams = [];
+                chosenTeams.push(teamsWithUnlockedPlayers[Math.floor(random() * teamsWithUnlockedPlayers.length)]);
+                let team2: { index: number, unlockedPlayers: Player[] };
+                do{
+                    team2 = teamsWithUnlockedPlayers[Math.floor(random() * teamsWithUnlockedPlayers.length)];
+                }while(chosenTeams[0].index === team2.index);
+                chosenTeams.push(team2);
+
+                // Swap random unlocked players
+                const playerIndexes = findBestSwapCandidates(chosenTeams[0].unlockedPlayers, chosenTeams[1].unlockedPlayers);
+
+                const temp = newSolution[chosenTeams[0].index][playerIndexes[0]];
+                newSolution[chosenTeams[0].index][playerIndexes[0]] = newSolution[chosenTeams[1].index][playerIndexes[1]];
+                newSolution[chosenTeams[1].index][playerIndexes[1]] = temp;
                 
-                if (team1Info.index !== team2Info.index) {
-                    // Swap random unlocked players
-                    const player1Index = newSolution[team1Info.index].findIndex(p =>  p?.lockedTeamId === null);
-                    const player2Index = newSolution[team2Info.index].findIndex(p =>  p?.lockedTeamId === null);
-                    
-                    const temp = newSolution[team1Info.index][player1Index];
-                    newSolution[team1Info.index][player1Index] = newSolution[team2Info.index][player2Index];
-                    newSolution[team2Info.index][player2Index] = temp;
-                    
-                    const newVariance = calculateVariance(newSolution);
-                    const acceptanceProbability = Math.exp(-Math.abs(newVariance - currentVariance) / temperature);
-                    
-                    if (newVariance < bestVariance) {
-                        bestSolution = JSON.parse(JSON.stringify(newSolution));
-                        bestVariance = newVariance;
-                        currentSolution = newSolution;
-                        currentVariance = newVariance;
-                    } else if (random() < acceptanceProbability) {
-                        currentSolution = newSolution;
-                        currentVariance = newVariance;
-                    }
+                const newVariance = calculateVariance(newSolution);
+                const acceptanceProbability = Math.exp(-Math.abs(newVariance - currentVariance) / (temperature * Math.max(currentVariance, 1)));
+
+                if (newVariance < bestVariance) {
+                    bestSolution = [...newSolution];
+                    bestVariance = newVariance;
+                    currentSolution = deepCopyTeams(newSolution);
+                    currentVariance = newVariance;
+                } else if (random() < acceptanceProbability) {
+                    currentSolution = deepCopyTeams(newSolution);
+                    currentVariance = newVariance;
                 }
             }
         }
         temperature *= coolingRate;
     }
-
-    return bestSolution.map((team, index) => ({
+    const bestSolutionVariance = calculateVariance(bestSolution);
+    console.log('Best variance after simulated annealing:', bestSolutionVariance);
+    const finalTeams = bestSolution.map((team, index) => ({
         id: index + 1,
         name: `Team ${index + 1}`,
         players: team.map(x => ({ ...x, assignedTeam: index + 1 })),
         attributeScores: calculateTeamScore(team)
     }));
+
+    const finalVariance = calculateVariance(finalTeams.map(t => t.players));
+    return finalTeams;
 }
 
-export { generateTeams, calculateTeamScore };
+function deepCopyTeams(teams: Player[][]): Player[][] {
+    return teams.map(team => 
+        team.map(player => ({
+            ...player,
+            attributes: [...player.attributes]  // Ensure attributes array is also copied
+        }))
+    );
+}
+
+export { generateTeams, calculateTeamScore, calculateVariance };
