@@ -5,10 +5,11 @@
       @drop="handleDrop"
       @touchend="(e) => $emit('touch-end', e)"
       >
-    <h3>{{ team?.name }}{{ team?.attributeScores && team?.attributeScores?.length > 0 ? ': '+team?.attributeScores : '' }}</h3>
+    <h3>{{ team?.name }}</h3>
+    <h4>{{ team?.attributeScores && team?.attributeScores?.length > 0 ? team?.attributeScores.map(x=>parseFloat(x.toFixed(2))) : '' }}</h4>
     <ul class="attributes-list">
       <li v-if="team?.attributeScores && team?.attributeScores?.length > 0" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
-        Attr {{attrIndex + 1}}: {{ attr }}
+        Attr {{attrIndex + 1}}: {{ attr.toFixed(2) }}
       </li>
       <li v-else>No attributes yet</li>
     </ul>
@@ -89,6 +90,11 @@ h3 {
     margin: 0;
 }
 
+h4 {
+    margin: 0;
+    font-size: 0.9em;
+    color: #666;
+}
 .team-card {
   padding: 10px;
   box-sizing: border-box;

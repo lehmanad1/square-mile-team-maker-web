@@ -33,7 +33,6 @@
           </span>
         </div>
       </div>
-      <div class="drop-indicator" ref="dropIndicator"></div>
     </div>
   </div>
 </template>
@@ -225,15 +224,6 @@ input[type="checkbox"] {
 input[type="checkbox"]:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.drop-indicator {
-  position: absolute;
-  width: 100%;
-  height: 2px;
-  background-color: #4CAF50;
-  display: none;
-  pointer-events: none;
 }
 
 .player-item.dragging {

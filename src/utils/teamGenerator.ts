@@ -9,7 +9,7 @@ function calculateTeamScore(team: Player[]): number[] {
     for (let attrIndex = 0; attrIndex < attributeCount; attrIndex++) {
         // Sum that specific attribute across all players
         scores[attrIndex] = team.reduce((sum, player) => 
-            sum + player.attributes[attrIndex], 0);
+            sum + player.attributes[attrIndex], 0) / team.length;
     }
     return scores;
 }
@@ -33,7 +33,7 @@ function calculateVariance(teams: Player[][]): number {
 function findBestSwapCandidates(team1: Player[], team2: Player[]): [number, number] {
     let bestDiff = Infinity;
     let bestBalance = Infinity;
-    let bestIndices: [number, number] = [0, 0];
+    let playerIds: [number, number] = [0, 0];
 
     const team1Total = calculateTeamScore(team1);
     const team2Total = calculateTeamScore(team2);
@@ -58,14 +58,14 @@ function findBestSwapCandidates(team1: Player[], team2: Player[]): [number, numb
 
                     if (balance < bestBalance) {
                         bestBalance = balance;
-                        bestIndices = [i, j];
+                        playerIds = [p1.id, p2.id];
                     }
                 }
             });
         }
     });
 
-    return bestIndices;
+    return playerIds;
 }
 
 function generateTeams(
@@ -86,9 +86,10 @@ function generateTeams(
 
     // Pre-assign locked players
     players.forEach(player => {
-        if (player.lockedTeamId && player.lockedTeamId <= maxTeams) {
+        if (player.lockedTeamId !== null && player.lockedTeamId > 0) {
             const teamIndex = player.lockedTeamId - 1;
             if (teams[teamIndex].length < maxPlayersPerTeam) {
+                console.log(`Assigning locked player ${player.name} to team ${teamIndex + 1}`);
                 teams[teamIndex].push({...player});
             } else {
                 unassignedPlayers.push(player);
@@ -100,6 +101,7 @@ function generateTeams(
 
     // Shuffle unassigned players
     const shuffledUnassigned = [...unassignedPlayers].sort(() => random() - 0.5);
+
 
     if (balanceType === "Most balanced teams") {
         return simulatedAnnealing(teams, shuffledUnassigned, maxTeams, maxPlayersPerTeam, 10000, 0.995, 0.01, random);
@@ -158,7 +160,8 @@ function simulatedAnnealing(
 ): TeamResult[] {
     // Initialize solution with existing teams
     let currentSolution = initialTeams.map(team => [...team]);
-    
+    console.log('Initial teams:', initialTeams);
+    console.log('CurrentSolution:', currentSolution);
     // Calculate minimum players per team and extras
     const totalPlayers = unassignedPlayers.length + currentSolution.reduce((sum, team) => sum + team.length, 0);
     const minPlayersPerTeam = Math.floor(totalPlayers / maxTeams);
@@ -212,8 +215,22 @@ function simulatedAnnealing(
                 chosenTeams.push(team2);
 
                 // Swap random unlocked players
-                const playerIndexes = findBestSwapCandidates(chosenTeams[0].unlockedPlayers, chosenTeams[1].unlockedPlayers);
+                const playerIds = findBestSwapCandidates(chosenTeams[0].unlockedPlayers, chosenTeams[1].unlockedPlayers);
 
+                const playerIndexes = [
+                    newSolution[chosenTeams[0].index].findIndex(p => p.id === playerIds[0]),
+                    newSolution[chosenTeams[1].index].findIndex(p => p.id === playerIds[1])
+                ];
+                if(chosenTeams[0].unlockedPlayers.find(p => p.id === playerIds[0])?.lockedTeamId !== null ){
+                    console.warn(`Player ${playerIds[0]} is locked and cannot be swapped.`);
+                    console.log(playerIds, playerIndexes, chosenTeams);
+                    continue;
+                }
+                if(chosenTeams[1].unlockedPlayers.find(p => p.id === playerIds[1])?.lockedTeamId !== null ){
+                    console.warn(`Player ${playerIds[1]} is locked and cannot be swapped.`);
+                    console.log(playerIds, playerIndexes, chosenTeams);
+                    continue;
+                }
                 const temp = newSolution[chosenTeams[0].index][playerIndexes[0]];
                 newSolution[chosenTeams[0].index][playerIndexes[0]] = newSolution[chosenTeams[1].index][playerIndexes[1]];
                 newSolution[chosenTeams[1].index][playerIndexes[1]] = temp;
