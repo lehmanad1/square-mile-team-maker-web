@@ -195,6 +195,7 @@ li {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 90%;
   cursor: grab;
   padding: 5px 0px;
   margin: 0px;
