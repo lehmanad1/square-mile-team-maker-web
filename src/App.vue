@@ -1,10 +1,13 @@
 <template>
     <div class="container">
+      <h2>Team Generator</h2>
       <div class="controls">
         <TeamInput
           :max-teams="maxTeams"
           :max-players-per-team="maxPlayersPerTeam"
           :balance-type="balanceType"
+          :show-settings="showSettings"
+          @toggle-settings="showSettings = !showSettings"
           @update:players="updatePlayerList"
           @update:maxTeams="updateMaxTeams"
           @update:maxPlayersPerTeam="updateMaxPlayersPerTeam"
@@ -51,6 +54,7 @@ const store = useStore();
 const maxTeams = ref(5);
 const maxPlayersPerTeam = ref(8);
 const balanceType = ref('Balanced but random');
+const showSettings = ref(false);
 const addPlayer = (playerData: { name: string; attributes: number[] }, index: number) => {
   const player: Player = {
     id: index,
@@ -75,6 +79,7 @@ const handleGenerateTeams = (balanceType: string) => {
 
 const updateMaxTeams = (value: number) => {
   maxTeams.value = value;
+  store.dispatch('updateTeamsCount', value);
 };
 
 const updateMaxPlayersPerTeam = (value: number) => {
@@ -136,7 +141,7 @@ const handleTouchMove = (event: TouchEvent) => {
   const timeDiff = Date.now() - touchState.value.startTime;
 
   // Only start dragging after 500ms and if horizontal movement is greater than vertical
-  if (!touchState.value.isDragging && timeDiff > 500 && Math.abs(deltaY) < Math.abs(deltaX)) {
+  if (!touchState.value.isDragging && timeDiff > 200 && Math.abs(deltaY) < Math.abs(deltaX)) {
     touchState.value.isDragging = true;
     touchState.value.draggedElement.style.opacity = '0.5';
   }
@@ -154,10 +159,11 @@ const handleTouchMove = (event: TouchEvent) => {
 const handleTouchEnd = (event: TouchEvent) => {
   if (!touchState.value.isDragging || !touchState.value.draggedPlayer){
     console.warn('Touch end without dragging');
-    console.log(touchState.value);
     return;
   }
-
+  if(touchState?.value?.draggedElement !== null){
+    touchState.value.draggedElement.style.opacity = '1';
+  }
   const touch = event.changedTouches[event.changedTouches.length - 1];
   
   // Temporarily hide dragged element to find element underneath
@@ -177,8 +183,7 @@ const handleTouchEnd = (event: TouchEvent) => {
 
   if (teamCard) {
     const targetTeamId = parseInt(teamCard.getAttribute('data-team-id') || '0');
-    console.log('Touch end on team card', targetTeamId, touchState.value.draggedPlayer);
-    
+
     if (targetTeamId) {
       if (touchState.value.sourceComponent === 'playerList') {
         store.dispatch('addPlayerToTeam', {

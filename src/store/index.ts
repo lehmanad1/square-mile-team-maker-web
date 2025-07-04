@@ -152,7 +152,24 @@ export default createStore<State>({
         ...team,
         attributeScores: calculateTeamScore(team.players)
       }));
-    }
+    },
+
+    setTeamsCount(state, count: number) {
+      if (count > state.teams.length) {
+        // Add new empty teams
+        for (let i = state.teams.length; i < count; i++) {
+          state.teams.push({
+            id: i + 1,
+            name: `Team ${i + 1}`,
+            players: [],
+            attributeScores: []
+          } as TeamResult);
+        }
+      } else if (count < state.teams.length) {
+        // Remove extra teams
+        state.teams.splice(count);
+      }
+    },
   },
 
   actions: {
@@ -202,8 +219,14 @@ export default createStore<State>({
     syncTeamAttributes({ commit }) {
       commit('syncTeamAttributes');
     },
-    removeAllPlayers({ commit }) {
+    removeAllPlayers({ commit, state }) {
       commit('removeAllPlayers', []);
+      commit('createEmptyTeams', state.teams.length);
+    },
+    updateTeamsCount({ commit }, count: number) {
+      if(count !== null){
+        commit('setTeamsCount', count);
+      }
     }
   },
 

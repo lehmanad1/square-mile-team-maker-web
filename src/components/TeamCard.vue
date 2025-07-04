@@ -4,32 +4,52 @@
       @dragover.prevent 
       @drop="handleDrop"
       @touchend="(e) => $emit('touch-end', e)"
-      >
-    <h3>{{ team?.name }}</h3>
-    <h4>{{ team?.attributeScores && team?.attributeScores?.length > 0 ? team?.attributeScores.map(x=>parseFloat(x.toFixed(2))) : '' }}</h4>
-    <ul class="attributes-list">
-      <li v-if="team?.attributeScores && team?.attributeScores?.length > 0" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
-        Attr {{attrIndex + 1}}: {{ attr.toFixed(2) }}
-      </li>
-      <li v-else>No attributes yet</li>
-    </ul>
-    <div class="two-columns">
-      <div :data-player-id="player.id" 
-        v-if="team?.players && team?.players?.length > 0" 
-        v-for="player in team.players" 
-        :key="player.id" 
-        :draggable="canDrag(player)" 
-        @dragstart="startDrag($event, player)"
-        @touchstart="(e) => $emit('touch-start', e, player, e.target, 'teamCard')"
-        @touchmove="(e) => $emit('touch-move', e)"
-      >
-        <input type="checkbox" 
-          :checked="player?.lockedTeamId !== null"
-          @change="(e) => handlePlayerLock(player, e)" 
+  >
+    <div v-if="showPlayers">
+      <div class="title-container">
+        <input type="checkbox"
+          :checked="showPlayers"
+          @change="toggleHideTeam"
         />
-        {{ player.name }}
+        <h3>{{ team?.name }}</h3>
       </div>
-      <div v-else>No players yet</div>
+      <h4>{{ team?.attributeScores && team?.attributeScores?.length > 0 ? team?.attributeScores.map(x=>parseFloat(x.toFixed(2))) : '' }}</h4>
+      <ul
+        class="attributes-list"
+      >
+        <li v-if="team?.attributeScores && team?.attributeScores?.length > 0" v-for="(attr, attrIndex) in team.attributeScores" :key="attrIndex">
+          Attr {{attrIndex + 1}}: {{ attr.toFixed(2) }}
+        </li>
+        <li v-else>No attributes yet</li>
+      </ul>
+      <div v-if="showPlayers" class="two-columns">
+        <div :data-player-id="player.id" 
+          v-if="team?.players && team?.players?.length > 0" 
+          v-for="player in team.players" 
+          :key="player.id" 
+          :draggable="canDrag(player)" 
+          @dragstart="startDrag($event, player)"
+          @touchstart="(e) => $emit('touch-start', e, player, e.target, 'teamCard')"
+          @touchmove="(e) => $emit('touch-move', e)"
+        >
+          <input type="checkbox" 
+            :checked="player?.lockedTeamId !== null"
+            @change="(e) => handlePlayerLock(player, e)" 
+          />
+          {{ player.name }}
+        </div>
+        <div v-else>No players yet</div>
+      </div>
+    </div>
+    <div v-else>
+      <div class="title-container">
+        <input type="checkbox"
+          :checked="showPlayers"
+          @change="toggleHideTeam"
+        />
+        <h3>{{ team?.name }}</h3>
+        <h4>{{ team?.attributeScores && team?.attributeScores?.length > 0 ? team?.attributeScores.map(x=>parseFloat(x.toFixed(2))) : '' }}</h4>
+      </div>
     </div>
   </div>
 </template>
@@ -49,6 +69,11 @@ export default defineComponent({
       type: Object,
       required: true
     }
+  },
+  data() {
+    return {
+      showPlayers: true,
+    };
   },
   emits: ['player-moved', 'player-locked', 'touch-start', 'touch-move', 'touch-end'],
   methods: {
@@ -79,6 +104,10 @@ export default defineComponent({
         playerId: player.id,
         targetTeamId: targetTeamId
       });
+    },
+    toggleHideTeam(event: Event) {
+      this.showPlayers = (event.target as HTMLInputElement).checked;
+      console.log('Toggle team visibility:', this.showPlayers);
     },
   },
 });
@@ -157,7 +186,7 @@ h4 {
     flex-wrap: nowrap;
     justify-content: center;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: showPlayers;
     max-height: none;
     padding: 12px;
   }
@@ -187,6 +216,12 @@ h4 {
   }
 }
 
+.title-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .player {
   cursor: grab;
   transition: all 0.3s ease;
@@ -194,7 +229,6 @@ h4 {
 }
 
 .player.moving {
-  opacity: 0.5;
   transform: scale(0.95);
 }
 

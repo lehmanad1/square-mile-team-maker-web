@@ -1,39 +1,67 @@
 <template>
   <div class="team-input">
-    <h2>Team Generation Settings</h2>
-    <div class="controls">
-      <label for="maxTeams">Max Teams:</label>
-      <input type="number" v-model.number="maxTeams" id="maxTeams" min="1" />
-
-      <label for="maxPlayers">Max Players per Team:</label>
-      <input type="number" v-model.number="maxPlayers" id="maxPlayers" min="1" />
-
-      <label for="teamBalance">Team Balance Type:</label>
-      <select v-model="balanceType" id="teamBalance">
-        <option value="Balanced but random">Balanced but random</option>
-        <option value="Most balanced teams">Most balanced teams</option>
-        <option value="Not very balanced">Not very balanced</option>
-        <option value="Random">Random</option>
-      </select>
-    </div>
-
-    <textarea
-      class="player-input"
-      v-model="localPlayerInput"
-      placeholder="Enter player names and attributes, one per line..."
-      rows="5"
-    ></textarea>
-    <div class="button-group">
-      <button @click="handleAddPlayers" class="add-button">Add Players</button>
-      <button @click="handleRemoveAllPlayers" class="add-button">Remove All Players</button>
-      <button
-        @click="handleGenerateTeams"
-        :disabled="!canGenerateTeams"
-        class="generate-button"
-      >
-        Generate Teams
+    <div
+      class="header-row"
+      style="display: flex; align-items: center; justify-content: space-between;"
+    >
+      <h4>Team Generation Settings</h4>
+      <button @click="emit('toggle-settings')" style="margin-left: 1em;">
+        {{ props.showSettings ? 'Hide' : 'Show' }} Settings
       </button>
-      <button @click="handleResetTeams" class="add-button">Reset Teams</button>
+    </div>
+    <div v-if="props.showSettings">
+      <div class="controls">
+        <label for="maxTeams">Max Teams:</label>
+        <input
+          type="number"
+          v-model.number="maxTeams"
+          id="maxTeams"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          pattern="[0-9]*"
+        />
+
+        <label for="maxPlayers">Max Players per Team:</label>
+        <input
+          type="number"
+          v-model.number="maxPlayers"
+          id="maxPlayers"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          pattern="[0-9]*"
+        />
+
+        <label for="teamBalance">Team Balance Type:</label>
+        <select v-model="balanceType" id="teamBalance">
+          <option value="Balanced but random">Balanced but random</option>
+          <option value="Most balanced teams">Most balanced teams</option>
+          <option value="Not very balanced">Not very balanced</option>
+          <option value="Random">Random</option>
+        </select>
+      </div>
+
+      <textarea
+        class="player-input"
+        v-model="localPlayerInput"
+        placeholder="Enter player names and attributes, one per line..."
+        rows="5"
+      ></textarea>
+      <button @click="handleAddPlayers" class="add-button">Add Players</button>
+    </div>
+    <div>
+      <div class="button-group">
+        <button @click="handleRemoveAllPlayers" class="add-button">Remove All Players</button>
+        <button @click="handleResetTeams" class="add-button">Reset Teams</button>
+        <button
+          @click="handleGenerateTeams"
+          :disabled="!canGenerateTeams"
+          class="generate-button"
+        >
+          Generate Teams
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -45,23 +73,22 @@ import { Player } from '../types';
 export default defineComponent({
   name: 'TeamInput',
   props: {
-    modelValue: {
-      type: String,
-      required: true,
-      default: '',
-    },
     maxTeams: { type: Number, required: true },
     maxPlayersPerTeam: { type: Number, required: true },
     balanceType: { type: String, required: true },
+    showSettings: {
+      type: Boolean,
+      default: true,
+    },
   },
   emits: {
-    'update:modelValue': (value: string) => true,
     'generate-teams': (balanceType: string) => true,
     'update:players': (players: Player[]) => true,
     'update:maxTeams': (value: number) => true,
     'update:maxPlayersPerTeam': (value: number) => true,
     'reset-teams': () => true,
     'remove-all-players': () => true,
+    'toggle-settings': () => true,
   },
   setup(props, { emit }) {
     const maxTeams = ref(props.maxTeams);
@@ -81,11 +108,11 @@ export default defineComponent({
     const canGenerateTeams = computed(() => true);
 
     const handleAddPlayers = () => {
-      playerList.value = []
+      playerList.value = [];
       const newPlayers = localPlayerInput.value
         .split('\n')
-        .filter(line => line.trim())
-        .map(line => {
+        .filter((line) => line.trim())
+        .map((line) => {
           const [name, ...attrs] = line.trim().split(',');
           return {
             id: Date.now() + Math.floor(Math.random() * 100000),
@@ -96,12 +123,12 @@ export default defineComponent({
           } as Player;
         });
       playerList.value.push(...newPlayers);
-    localPlayerInput.value = '';
-    emit('update:players', playerList.value);
+      localPlayerInput.value = '';
+      emit('update:players', playerList.value);
     };
 
     const handleGenerateTeams = () => {
-      const selectedPlayers = playerList.value.filter(p => p.selected);
+      const selectedPlayers = playerList.value.filter((p) => p.selected);
       emit('generate-teams', balanceType.value);
     };
 
@@ -123,13 +150,14 @@ export default defineComponent({
       handleGenerateTeams,
       handleRemoveAllPlayers,
       canGenerateTeams,
+      props,
+      emit,
     };
   },
 });
 </script>
 
 <style scoped>
-
 .player-input {
   width: 100%;
   height: 100px;
@@ -165,7 +193,7 @@ label {
 button {
   grid-column: 1 / -1;
   padding: 10px;
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 4px;
@@ -176,7 +204,7 @@ button:hover {
   background-color: #45a049;
 }
 
-input[type="number"],
+input[type='number'],
 select {
   padding: 5px;
   border: 1px solid #ddd;
@@ -190,7 +218,8 @@ select {
   margin: 10px 0;
 }
 
-.add-button, .generate-button {
+.add-button,
+.generate-button {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;

@@ -5,16 +5,21 @@
          data-drop-zone="player-list"
          @dragover.prevent 
          @drop="handleDrop">
-      <div class="select-all-container">
+      <div class="selection-container">
         <input type="checkbox" 
                :checked="allSelectablePlayersSelected"
                @change="toggleSelectAll" />
         <span>Select All</span>
       </div>
+      <div class="selection-container">
+        <input type="checkbox"
+               @change="hideUnselectedPlayers" />
+        <span>Hide Unselected</span>
+      </div>
       <div v-for="(player, index) in players">
         <div v-if="!player.assignedTeamId" class="empty-state"
             :key="player.id"
-            :class="['player-item', { 'player-assigned': player.assignedTeamId !== null }]"
+            :class="['player-item', { 'player-assigned': player.assignedTeamId !== null }, { 'hidden-player': hideSelected && !player.selected }]"
             :draggable="!player.assignedTeamId"
             :data-index="index"
             :data-player-id="player.id"
@@ -46,6 +51,7 @@ const store = useStore();
 const players = computed(() => store.state.players);
 const dropIndicator = ref<HTMLElement | null>(null);
 let dragIndex = -1;
+let hideSelected = ref(false);
 
 defineProps({
   touchState: {
@@ -123,6 +129,10 @@ const toggleSelectAll = (event: Event) => {
     .forEach(player => {
       store.dispatch('updatePlayer', { ...player, selected: isChecked });
     });
+};
+
+const hideUnselectedPlayers = (event: Event) => {
+  hideSelected.value = (event.target as HTMLInputElement).checked;
 };
 </script>
 
@@ -214,6 +224,10 @@ li {
   opacity: 0.7;
 }
 
+.hidden-player {
+  display: none;
+}
+
 .text-disabled {
   color: #888;
 }
@@ -256,7 +270,7 @@ h2 {
   padding-left: 10px;
 }
 
-.select-all-container {
+.selection-container {
   display: flex;
   align-items: center;
   gap: 8px;
