@@ -1,7 +1,7 @@
 import { Player, TeamResult } from '../types';
 
 function calculateTeamScore(team: Player[]): number[] {
-    if (team.length === 0) return [];
+    if (team.length === 0 || team[0].attributes === null) return [];
     const attributeCount = team[0].attributes.length;
     const scores = new Array(attributeCount).fill(0);
     

@@ -12,6 +12,7 @@
           @update:maxTeams="updateMaxTeams"
           @update:maxPlayersPerTeam="updateMaxPlayersPerTeam"
           @generate-teams="handleGenerateTeams"
+          @change-balance-type="updateBalanceType"
           @reset-teams="store.dispatch('createEmptyTeams', maxTeams)"
           @remove-all-players="store.dispatch('removeAllPlayers')"
         />
@@ -84,7 +85,12 @@ const updateMaxTeams = (value: number) => {
 
 const updateMaxPlayersPerTeam = (value: number) => {
   maxPlayersPerTeam.value = value;
-  store.dispatch('createEmptyTeams', maxTeams.value);
+  store.dispatch('updatePlayersPerTeamCount', maxPlayersPerTeam.value);
+};
+
+const updateBalanceType = (value: string) => {
+  console.log('Updating balance type:', value);
+  balanceType.value = value;
 };
 
 const updatePlayerList = (players: Array<{ name: string; attributes: number[] }>) => {
@@ -235,10 +241,11 @@ watch(() => store.state, (newState) => {
 }, { deep: true });
 
 // Save settings when they change
-watch([maxTeams, maxPlayersPerTeam], ([newMaxTeams, newMaxPlayersPerTeam]) => {
+watch([maxTeams, maxPlayersPerTeam, balanceType], ([newMaxTeams, newMaxPlayersPerTeam, balanceType]) => {
   localStorage.setItem('settings', JSON.stringify({
     maxTeams: newMaxTeams,
-    maxPlayersPerTeam: newMaxPlayersPerTeam
+    maxPlayersPerTeam: newMaxPlayersPerTeam,
+    balanceType: balanceType
   }));
 }, { deep: true });
 
@@ -249,6 +256,9 @@ onMounted(() => {
     const settings = JSON.parse(savedSettings);
     maxTeams.value = settings.maxTeams;
     maxPlayersPerTeam.value = settings.maxPlayersPerTeam;
+    balanceType.value = settings.balanceType || 'Balanced but random';
+    store.dispatch('updateTeamsCount', settings.maxTeams);
+    store.dispatch('updatePlayersPerTeamCount', settings.maxPlayersPerTeam);
   }
   
   const savedState = localStorage.getItem('appState');

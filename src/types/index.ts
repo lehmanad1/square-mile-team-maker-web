@@ -28,6 +28,8 @@ export interface TeamResult {
 export interface State {
   players: Player[];
   teams: Team[];
+  maxTeams: number,
+  maxPlayersPerTeam: number,
 }
 
 export interface TouchState {

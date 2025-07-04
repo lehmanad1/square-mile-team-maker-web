@@ -14,27 +14,32 @@
         <label for="maxTeams">Max Teams:</label>
         <input
           type="number"
-          v-model.number="maxTeams"
+          :value="props.maxTeams"
           id="maxTeams"
           min="1"
           step="1"
           inputmode="numeric"
           pattern="[0-9]*"
+          @input="onMaxTeamsInput"
         />
 
         <label for="maxPlayers">Max Players per Team:</label>
         <input
           type="number"
-          v-model.number="maxPlayers"
+          :value="props.maxPlayersPerTeam"
           id="maxPlayers"
           min="1"
           step="1"
           inputmode="numeric"
           pattern="[0-9]*"
+          @input="onMaxPlayersInput"
         />
 
         <label for="teamBalance">Team Balance Type:</label>
-        <select v-model="balanceType" id="teamBalance">
+        <select 
+          :value="props.balanceType" 
+          id="teamBalance"
+          @change="handleChangeBalanceType">
           <option value="Balanced but random">Balanced but random</option>
           <option value="Most balanced teams">Most balanced teams</option>
           <option value="Not very balanced">Not very balanced</option>
@@ -67,7 +72,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, watch } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
 import { Player } from '../types';
 
 export default defineComponent({
@@ -89,21 +94,12 @@ export default defineComponent({
     'reset-teams': () => true,
     'remove-all-players': () => true,
     'toggle-settings': () => true,
+    'change-balance-type': (value: string) => true,
   },
   setup(props, { emit }) {
-    const maxTeams = ref(props.maxTeams);
-    const maxPlayers = ref(props.maxPlayersPerTeam);
     const balanceType = ref(props.balanceType);
     const localPlayerInput = ref('');
     const playerList = ref<Player[]>([]);
-
-    watch(maxTeams, (newValue) => {
-      emit('update:maxTeams', newValue);
-    });
-
-    watch(maxPlayers, (newValue) => {
-      emit('update:maxPlayersPerTeam', newValue);
-    });
 
     const canGenerateTeams = computed(() => true);
 
@@ -140,18 +136,39 @@ export default defineComponent({
       emit('remove-all-players');
     };
 
+    const handleChangeBalanceType = (event: Event) => {
+      const value = (event.target as HTMLSelectElement).value;
+      balanceType.value = value;
+      emit('change-balance-type', value);
+    };
+
+    const onMaxTeamsInput = (event: Event) => {
+      const value = Number((event.target as HTMLInputElement).value);
+      if (!isNaN(value)) {
+        emit('update:maxTeams', value);
+      }
+    };
+
+    const onMaxPlayersInput = (event: Event) => {
+      const value = Number((event.target as HTMLInputElement).value);
+      if (!isNaN(value)) {
+        emit('update:maxPlayersPerTeam', value);
+      }
+    };
+
     return {
-      maxTeams,
-      maxPlayers,
       balanceType,
       localPlayerInput,
       handleAddPlayers,
       handleResetTeams,
       handleGenerateTeams,
       handleRemoveAllPlayers,
+      handleChangeBalanceType,
       canGenerateTeams,
       props,
       emit,
+      onMaxTeamsInput,
+      onMaxPlayersInput,
     };
   },
 });

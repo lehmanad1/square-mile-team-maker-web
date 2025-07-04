@@ -5,7 +5,9 @@ import { calculateTeamScore } from '../utils/teamGenerator';
 export default createStore<State>({
   state: {
     players: [],
-    teams: [] as TeamResult []
+    teams: [] as TeamResult [],
+    maxTeams: 0 as number,
+    maxPlayersPerTeam: 0 as number,
   },
 
   mutations: {
@@ -27,7 +29,7 @@ export default createStore<State>({
       if (player) {
         player.assignedTeamId = teamId;
         const team = state.teams.find(t => t.id === teamId);
-        if (team) {
+        if (team && team.players.length < state.maxPlayersPerTeam) {
           team.players.push(player);
         }
       }
@@ -155,6 +157,7 @@ export default createStore<State>({
     },
 
     setTeamsCount(state, count: number) {
+      state.maxTeams = count;
       if (count > state.teams.length) {
         // Add new empty teams
         for (let i = state.teams.length; i < count; i++) {
@@ -170,18 +173,20 @@ export default createStore<State>({
         state.teams.splice(count);
       }
     },
+    setPlayersPerTeamCount(state, count: number) {
+      state.maxPlayersPerTeam = count;
+    }
   },
 
   actions: {
     addPlayer({ commit }, player: Player) {
       commit('addPlayer', player);
     },
-    createEmptyTeams({ commit }, count: number) {
+    createEmptyTeams({ commit, state }, count: number) {
       commit('createEmptyTeams', count);
       commit('syncPlayerTeamAssignments');
     },
     addPlayerToTeam({ commit }, payload) {
-      console.log('Adding player to team:', payload);
       commit('addPlayerToTeam', payload);
       commit('syncPlayerTeamAssignments');
       commit('syncTeamAttributes');
@@ -203,7 +208,6 @@ export default createStore<State>({
       commit('syncTeamAttributes');
     },
     movePlayer({ commit }, { playerId, targetTeamId }: { playerId: number, targetTeamId: number }) {
-      console.log('moving player:', playerId, 'to team:', targetTeamId);
       commit('movePlayer', { playerId,  targetTeamId });
       commit('syncPlayerTeamAssignments');
       commit('syncTeamAttributes');
@@ -226,6 +230,19 @@ export default createStore<State>({
     updateTeamsCount({ commit }, count: number) {
       if(count !== null){
         commit('setTeamsCount', count);
+      }
+    },
+    updatePlayersPerTeamCount({ commit, state }, count: number) {
+      commit('setPlayersPerTeamCount', count);
+      if (count !== null) {
+        state.teams.forEach(team => {
+          if(team.players.length > count) {
+            const unlockedPlayers = team.players.filter(p => !p.lockedTeamId);
+            for (let i=0; i < (team.players.length - count); i++) {
+              commit('removePlayerFromTeam', unlockedPlayers[i].id);
+            }
+          }
+        });
       }
     }
   },
