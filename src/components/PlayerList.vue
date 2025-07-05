@@ -1,53 +1,214 @@
 <template>
   <div class="player-list">
-    <h2>Added Players</h2>
-    <div class="players-container">
-      <div v-if="players.length === 0" class="empty-state">
-        No players added yet
+    <div class="title-container">
+      <h2>Available Players ({{ selectedPlayers.length }})</h2>
+      <button @click="emit('toggle-hide-player-list')" style="margin-left: 1em;">
+        {{ props.showPlayerList ? 'Hide' : 'Show' }}
+      </button>
       </div>
-      <ul v-else>
-        <li v-for="player in players" :key="player.id" class="player-item">
-          <input 
-            type="checkbox" 
-            v-model="player.selected"
-            @change="$emit('update:players', players)"
-          />
-          <span>{{ player.name }}</span>
-        </li>
-      </ul>
+    <div v-if="props.showPlayerList" class="player-container drop-zone" 
+        data-drop-zone="player-list"
+        @dragover.prevent 
+        @drop="handleDrop">
+      <div class="selection-container">
+        <input type="checkbox" 
+              :checked="allSelectablePlayersSelected"
+              @change="toggleSelectAll" />
+        <span>Select All</span>
+      </div>
+      <div class="selection-container-end">
+        <input type="checkbox"
+              @change="hideUnselectedPlayers" />
+        <span>Hide Unselected</span>
+      </div>
+      <div v-for="(player, index) in players">
+        <div v-if="!player.assignedTeamId" class="empty-state"
+            :key="player.id"
+            :class="['player-item', { 'player-assigned': player.assignedTeamId !== null }, { 'hidden-player': hideSelected && !player.selected }]"
+            :draggable="!player.assignedTeamId"
+            :data-index="index"
+            :data-player-id="player.id"
+            @dragstart="startDrag($event, player, index)"
+            @dragenter.prevent="onDragEnter($event)"
+            @dragover.prevent
+            @touchstart="(e) => $emit('touch-start', e, player, e.target, 'playerList')"
+            @touchmove="(e) => $emit('touch-move', e)"
+            @touchend="(e) => $emit('touch-end', e)">
+          <input type="checkbox" 
+                v-model="player.selected"
+                :disabled="player.assignedTeamId !== null"
+                @change="(e) => handlePlayerSelection(player, e)" />
+          <span :class="['overflow-text-field', { 'text-disabled': player.assignedTeamId !== null }]">
+            {{ player.name }}
+          </span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+import { useStore } from 'vuex';
 import { Player } from '../types';
 
-export default defineComponent({
-  name: 'PlayerList',
-  props: {
-    players: {
-      type: Array as () => Player[],
-      required: true,
-    },
+const store = useStore();
+const players = computed(() => store.state.players);
+const selectedPlayers = computed(() => store.state.players.filter(p => p.selected));
+const dropIndicator = ref<HTMLElement | null>(null);
+let dragIndex = -1;
+let hideSelected = ref(false);
+let showList = ref(true);
+
+const props = defineProps({
+  touchState: {
+    type: Object,
+    required: true
   },
-  emits: ['update:players'],
+  showPlayerList: {
+    type: Boolean,
+    default: true
+  }
 });
+
+const emit = defineEmits(['touch-start', 'touch-move', 'touch-end', 'toggle-hide-player-list']);
+
+const startDrag = (event: DragEvent, player: Player, index: number) => {
+  if (player.assignedTeamId) return;
+  dragIndex = index;
+  
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('playerId', player.id.toString());
+    event.dataTransfer.setData('source', 'playerList');
+    event.dataTransfer.setData('sourceIndex', index.toString());
+  }
+};
+
+const onDragEnter = (event: DragEvent) => {
+  const target = event.target as HTMLElement;
+  const targetIndex = parseInt(target.dataset.index || '-1');
+  
+  if (targetIndex !== -1 && dragIndex !== targetIndex) {
+    const rect = target.getBoundingClientRect();
+    const middleY = rect.top + rect.height / 2;
+    const isBelow = event.clientY > middleY;
+    
+    if (dropIndicator.value) {
+      dropIndicator.value.style.top = `${isBelow ? rect.bottom : rect.top}px`;
+      dropIndicator.value.style.display = 'block';
+    }
+  }
+};
+
+const handleDrop = (event: DragEvent) => {
+  const source = event.dataTransfer?.getData('source');
+  console.log('Drop source:', source);
+  if (source === 'playerList') {
+    const fromIndex = parseInt(event.dataTransfer?.getData('sourceIndex') || '-1');
+    const target = event.target as HTMLElement;
+    const toIndex = parseInt(target.dataset.index || '-1');
+    
+    if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+      store.dispatch('reorderPlayers', { fromIndex, toIndex });
+    }
+  } else {
+    const playerId = parseInt(event.dataTransfer?.getData('playerId') ?? '-1');
+    store.dispatch('movePlayer', { playerId: playerId, targetTeamId: null } as { playerId: number, targetTeamId: number | null});
+  }
+  
+  if (dropIndicator.value) {
+    dropIndicator.value.style.display = 'none';
+  }
+};
+
+const handlePlayerSelection = (player: Player, event: Event) => {
+  const isChecked = (event.target as HTMLInputElement).checked;
+  var updatedPlayer: Player = { ...player, selected: isChecked };
+  store.dispatch('updatePlayer', { updatedPlayer });
+};
+
+const allSelectablePlayersSelected = computed(() => {
+  const selectablePlayers = players.value.filter(p => !p.assignedTeamId);
+  return selectablePlayers.length > 0 && selectablePlayers.every(p => p.selected);
+});
+
+const toggleSelectAll = (event: Event) => {
+  const isChecked = (event.target as HTMLInputElement).checked;
+  (players.value as Player[])
+    .filter(p => !p.assignedTeamId)
+    .forEach(player => {
+      store.dispatch('updatePlayer', { ...player, selected: isChecked });
+    });
+};
+
+const hideUnselectedPlayers = (event: Event) => {
+  hideSelected.value = (event.target as HTMLInputElement).checked;
+};
+
 </script>
 
 <style scoped>
+
+.title-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-left: 10px;
+}
+
+button {
+  grid-column: 1 / -1;
+  padding: 10px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 .player-list {
   border: 2px solid #ddd;
   border-radius: 8px;
-  padding: 16px;
+  padding: 0px;
   background-color: #f9f9f9;
   height: 100%;
 }
 
-.players-container {
+.player-container {
+  min-height: 50px;
   height: calc(100vh - 200px);
   overflow-y: auto;
-  padding-right: 8px;
+  padding-right: 16px; /* Increased to accommodate wider scrollbar */
+  padding: 8px;
+  border: 1px dashed #ccc;
+  position: relative;
+  box-sizing: border-box;
+  touch-action: pan-y pinch-zoom;
+  scrollbar-width: auto;
+  scrollbar-color: #666 #f1f1f1;
+}
+
+/* Webkit Scrollbar Styles */
+.player-container::-webkit-scrollbar {
+  width: 16px;
+  background: #f1f1f1;
+}
+
+.player-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.player-container::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 8px;
+  border: 3px solid #f1f1f1;
+  min-height: 40px;
+}
+
+.player-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .empty-state {
@@ -74,9 +235,121 @@ li {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 90%;
+  cursor: grab;
+  padding: 5px 0px;
+  margin: 0px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.player-assigned {
+  background-color: #e0e0e0;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.hidden-player {
+  display: none;
+}
+
+.text-disabled {
+  color: #888;
 }
 
 input[type="checkbox"] {
   margin: 0;
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.player-item.dragging {
+  opacity: 0.5;
+}
+
+.player-item.moving {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.player-item.entering {
+  animation: slide-in 0.3s ease forwards;
+}
+
+.overflow-text-field {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-item.leaving {
+  animation: slide-out 0.3s ease forwards;
+}
+
+h2 {
+  font-size: 24px;
+  padding-left: 10px;
+}
+
+.selection-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.selection-container-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+.drop-zone {
+  position: relative;
+}
+
+.drop-zone::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
 }
 </style>

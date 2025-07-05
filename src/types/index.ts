@@ -1,12 +1,15 @@
 export interface Player {
-    id: string;
-    name: string;
-    attributes: number[];
-    selected: boolean;
+  id: number;
+  name: string;
+  attributes: number[];
+  selected: boolean;
+  assignedTeamId: number | null;
+  lockedTeamId: number | null;
 }
 
 export interface Team {
-    players: Player[];
+  id: number;
+  players: Player[];
 }
 
 export interface TeamGenerationOptions {
@@ -16,6 +19,28 @@ export interface TeamGenerationOptions {
 }
 
 export interface TeamResult {
-    players: string[];
+    id: number;
+    name: string;
+    players: Player[];
     attributeScores: number[];
+}
+
+export interface State {
+  players: Player[];
+  teams: Team[];
+  maxTeams: number,
+  maxPlayersPerTeam: number,
+}
+
+export interface TouchState {
+  startX: number;
+  startY: number;
+  startTime: number;
+  isDragging: boolean;
+  draggedPlayer: Player | null;
+  draggedElement: HTMLElement | null;
+  sourceComponent: string | null;
+  elementX: number;
+  elementY: number;
+  elementWidth: number;
 }

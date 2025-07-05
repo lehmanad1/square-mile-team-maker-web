@@ -1,12 +1,18 @@
 <template>
   <div class="team-results">
-    <h2>Generated Teams</h2>
+    <h2>Teams</h2>
+    <div v-if="teams.some(x=>x.players.length>0)" class="variance-text">Total Variance: {{ totalVariance.toFixed(2) }}</div>
     <div class="teams-grid">
       <TeamCard
-        v-for="i in maxTeams"
-        :key="i"
-        :team="teams[i - 1]"
-        :teamIndex="i - 1"
+        v-for="team in teams"
+        :key="team.id"
+        :team="team"
+        :touch-state="touchState"
+        @player-moved="handlePlayerMoved"
+        @player-locked="handlePlayerLocked"
+        @touch-start="handleTouchStart"
+        @touch-move="(e) => $emit('touch-move', e)"
+        @touch-end="(e) => $emit('touch-end', e)"
       />
     </div>
   </div>
@@ -16,12 +22,14 @@
 import { defineComponent } from 'vue';
 import { TeamResult } from '../types';
 import TeamCard from './TeamCard.vue';
+import { calculateVariance } from '../utils/teamGenerator';
 
 export default defineComponent({
   name: 'TeamResults',
   components: {
     TeamCard,
   },
+  emits: ['player-moved', 'player-locked', 'touch-start', 'touch-move', 'touch-end'],
   props: {
     teams: {
       type: Array as () => TeamResult[],
@@ -31,13 +39,38 @@ export default defineComponent({
       type: Number,
       required: true,
     },
+    touchState: {
+      type: Object,
+      required: true
+    }
   },
+  computed: {
+    totalVariance(): number {
+      return calculateVariance(this.teams.map(team => team.players));
+    }
+  },
+  methods: {
+    handleTouchStart(event: TouchEvent, player: any, target: HTMLElement, source: string) {
+      this.$emit('touch-start', event, player, target, source);
+    },
+    handlePlayerMoved({ playerId, targetTeamId }: { playerId: number, targetTeamId: number }) {
+      this.$emit('player-moved', { playerId, targetTeamId });
+    },
+    handlePlayerLocked({ playerId, targetTeamId }: { playerId: number, targetTeamId: number }) {
+      this.$emit('player-locked', { playerId, targetTeamId });
+    },
+  }
 });
 </script>
 
 <style scoped>
 .team-results {
-  margin-top: 20px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 0px;
+  background-color: #f9f9f9;
+  height: 100%;
+  text-align: left;
 }
 
 .team {
@@ -50,6 +83,7 @@ export default defineComponent({
 
 h2 {
   font-size: 24px;
+  padding-left: 10px;
 }
 
 h3 {
@@ -70,8 +104,50 @@ h3 {
 
 .teams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 8px;
+  height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  padding-right: 16px;
+  scrollbar-width: thick;
+  scrollbar-color: #666 #f1f1f1;
+}
+
+/* Webkit Scrollbar Styles */
+.teams-grid::-webkit-scrollbar {
+  width: 16px;
+  background: #f1f1f1;
+}
+
+.teams-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.teams-grid::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 8px;
+  border: 3px solid #f1f1f1;
+  min-height: 40px;
+}
+
+.teams-grid::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+@media (max-width: 768px) {
+  .teams-grid {
+    grid-template-columns: 1fr;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .team-results {
+    padding: 0;
+  }
 }
 
 ul {
@@ -103,5 +179,12 @@ li {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
+}
+
+.variance-text {
+  font-size: 14px;
+  color: #666;
+  padding-left: 12px;
+  margin-bottom: 8px;
 }
 </style>

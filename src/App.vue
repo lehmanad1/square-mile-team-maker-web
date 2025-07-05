@@ -1,81 +1,280 @@
 <template>
-  <div id="app">
     <div class="container">
+      <h2>Team Generator</h2>
       <div class="controls">
         <TeamInput
           :max-teams="maxTeams"
           :max-players-per-team="maxPlayersPerTeam"
           :balance-type="balanceType"
+          :show-settings="showSettings"
+          @toggle-settings="showSettings = !showSettings"
           @update:players="updatePlayerList"
           @update:maxTeams="updateMaxTeams"
           @update:maxPlayersPerTeam="updateMaxPlayersPerTeam"
           @generate-teams="handleGenerateTeams"
+          @change-balance-type="updateBalanceType"
+          @reset-teams="store.dispatch('createEmptyTeams', maxTeams)"
+          @remove-all-players="store.dispatch('removeAllPlayers')"
         />
       </div>
 
-      <div class="results-container">
-        <PlayerList :players="playerList" class="player-list" />
-        <TeamResults :teams="teams" :max-teams="maxTeams" class="team-results" />
+      <div :class="[{ 'results-container': showAllPlayers }, { 'results-container-hidden': !showAllPlayers }]">
+        <PlayerList 
+          class="player-list"
+          :touch-state="touchState"
+          :show-player-list="showAllPlayers"
+          @touch-start="handleTouchStart"
+          @touch-move="handleTouchMove"
+          @touch-end="handleTouchEnd"
+          @toggle-hide-player-list="handleToggleHidePlayerList"
+        />
+        <TeamResults 
+          class="team-results"
+          :teams="store.state.teams" 
+          :max-teams="maxTeams"
+          :touch-state="touchState"
+          @player-moved="handlePlayerMoved"
+          @player-locked="handlePlayerLocked"
+          @touch-start="handleTouchStart"
+          @touch-move="handleTouchMove"
+          @touch-end="handleTouchEnd"
+        />
       </div>
     </div>
-  </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from 'vue';
+<script setup lang="ts">
+import { useStore } from 'vuex';
+import { ref, onMounted, watch } from 'vue';
 import TeamResults from './components/TeamResults.vue';
 import PlayerList from './components/PlayerList.vue';
 import TeamInput from './components/TeamInput.vue';
 import { generateTeams as generateTeamUtils } from './utils/teamGenerator';
 import { Player, TeamResult } from './types';
 
-export default defineComponent({
-  name: 'App',
-  components: {
-    TeamResults,
-    PlayerList,
-    TeamInput,
-  },
-  setup() {
-    const maxTeams = ref(2);
-    const maxPlayersPerTeam = ref(5);
-    const balanceType = ref('Most balanced teams');
-    const playerList = ref<Player[]>([]);
-    const teams = ref<TeamResult[]>([]);
+const store = useStore();
 
-    const updatePlayerList = (newPlayers: Player[]) => {
-      playerList.value = newPlayers;
-    };
+const maxTeams = ref(5);
+const maxPlayersPerTeam = ref(8);
+const balanceType = ref('Balanced but random');
+const showSettings = ref(false);
+const showAllPlayers = ref(true);
+const addPlayer = (playerData: { name: string; attributes: number[] }, index: number) => {
+  const player: Player = {
+    id: index,
+    name: playerData.name,
+    attributes: playerData.attributes,
+    selected: false,
+    assignedTeamId: null,
+    lockedTeamId: null,
+  };
+  store.dispatch('addPlayer', player);
+};
 
-    const handleGenerateTeams = ({ players, maxTeams, maxPlayersPerTeam, balanceType }) => {
-      teams.value = generateTeamUtils(
-        players,
-        maxTeams,
-        maxPlayersPerTeam,
-        balanceType
-      );
-    };
+const handleGenerateTeams = (balanceType: string) => {
+  const teams = generateTeamUtils(
+    store.state.players.filter((p: Player) => p.selected),
+    maxTeams.value,
+    maxPlayersPerTeam.value,
+    balanceType
+  );
+  store.dispatch('setTeams', teams);
+};
 
-    const updateMaxTeams = (value: number) => {
-      maxTeams.value = value;
-    };
+const updateMaxTeams = (value: number) => {
+  maxTeams.value = value;
+  store.dispatch('updateTeamsCount', value);
+};
 
-    const updateMaxPlayersPerTeam = (value: number) => {
-      maxPlayersPerTeam.value = value;
-    };
+const updateMaxPlayersPerTeam = (value: number) => {
+  maxPlayersPerTeam.value = value;
+  store.dispatch('updatePlayersPerTeamCount', maxPlayersPerTeam.value);
+};
 
-    return {
-      maxTeams,
-      maxPlayersPerTeam,
-      balanceType,
-      playerList,
-      teams,
-      updatePlayerList,
-      handleGenerateTeams,
-      updateMaxTeams,
-      updateMaxPlayersPerTeam,
-    };
-  },
+const updateBalanceType = (value: string) => {
+  console.log('Updating balance type:', value);
+  balanceType.value = value;
+};
+
+const updatePlayerList = (players: Array<{ name: string; attributes: number[] }>) => {
+  players.forEach((player, index) => addPlayer(player, index));
+};
+
+const handlePlayerMoved = ({ playerId, targetTeamId }: { playerId: number, targetTeamId: number }) => {
+  store.dispatch('movePlayer', { playerId, targetTeamId });
+};
+
+const handlePlayerLocked = ({ playerId, targetTeamId }: { playerId: number, targetTeamId: number }) => {
+  store.dispatch('lockPlayer', { playerId, targetTeamId });
+};
+
+const touchState = ref({
+  startX: 0,
+  startY: 0,
+  startTime: 0,
+  isDragging: false,
+  draggedPlayer: null as Player | null,
+  draggedElement: null as HTMLElement | null,
+  sourceComponent: null as string | null,
+  elementX: 0,
+  elementY: 0,
+  elementWidth: 0
+});
+
+const handleTouchStart = (event: TouchEvent, player: Player, element: HTMLElement, source: string) => {
+  if (player.lockedTeamId) return;
+  
+  const touch = event.touches[0];
+  const rect = element.getBoundingClientRect();
+  
+  touchState.value = {
+    startX: touch.clientX,
+    startY: touch.clientY,
+    startTime: Date.now(),
+    isDragging: false, // Changed from true to false
+    draggedPlayer: player,
+    draggedElement: element,
+    sourceComponent: source,
+    elementX: rect.left,
+    elementY: rect.top,
+    elementWidth: rect.width
+  };
+};
+
+const handleTouchMove = (event: TouchEvent) => {
+  if (!touchState.value.draggedPlayer || !touchState.value.draggedElement) return;
+  
+  const touch = event.touches[0];
+  const deltaX = touch.clientX - touchState.value.startX;
+  const deltaY = touch.clientY - touchState.value.startY;
+  const timeDiff = Date.now() - touchState.value.startTime;
+
+  // Only start dragging after 500ms and if horizontal movement is greater than vertical
+  if (!touchState.value.isDragging && timeDiff > 200 && Math.abs(deltaY) < Math.abs(deltaX)) {
+    touchState.value.isDragging = true;
+    touchState.value.draggedElement.style.opacity = '0.5';
+  }
+
+  if (touchState.value.isDragging) {
+    touchState.value.draggedElement.style.position = 'fixed';
+    touchState.value.draggedElement.style.width = `${touchState.value.elementWidth}px`;
+    touchState.value.draggedElement.style.zIndex = '1000';
+    touchState.value.draggedElement.style.left = `${touchState.value.elementX + deltaX}px`;
+    touchState.value.draggedElement.style.top = `${touchState.value.elementY + deltaY}px`;
+    event.preventDefault();
+  }
+};
+
+const handleTouchEnd = (event: TouchEvent) => {
+  if (!touchState.value.isDragging || !touchState.value.draggedPlayer){
+    console.warn('Touch end without dragging');
+    return;
+  }
+  if(touchState?.value?.draggedElement !== null){
+    touchState.value.draggedElement.style.opacity = '1';
+  }
+  const touch = event.changedTouches[event.changedTouches.length - 1];
+  
+  // Temporarily hide dragged element to find element underneath
+  const draggedElement = touchState.value.draggedElement as HTMLElement;
+  const originalVisibility = draggedElement.style.visibility;
+  draggedElement.style.visibility = 'hidden';
+  
+  const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+  
+  // Restore visibility
+  draggedElement.style.visibility = originalVisibility;
+
+  // Look for drop zones
+  const dropZone = targetElement?.closest('[data-drop-zone]');
+  const dropZoneType = dropZone?.getAttribute('data-drop-zone');
+  const teamCard = targetElement?.closest('.team-card');
+
+  if (teamCard) {
+    const targetTeamId = parseInt(teamCard.getAttribute('data-team-id') || '0');
+
+    if (targetTeamId) {
+      if (touchState.value.sourceComponent === 'playerList') {
+        store.dispatch('addPlayerToTeam', {
+          playerId: touchState.value.draggedPlayer.id,
+          teamId: targetTeamId
+        });
+      } else if (touchState.value.sourceComponent === 'teamCard') {
+        store.dispatch('movePlayer', {
+          playerId: touchState.value.draggedPlayer.id,
+          targetTeamId
+        });
+      }
+    }
+  }
+  else if (dropZoneType === 'player-list' && touchState.value.sourceComponent === 'teamCard') {
+    store.dispatch('removePlayerFromTeam', touchState.value.draggedPlayer.id);
+  }
+  else {
+    console.warn('No valid drop target found', dropZoneType);
+  }
+
+  // Reset element styling
+  if (touchState.value.draggedElement) {
+    touchState.value.draggedElement.style.position = '';
+    touchState.value.draggedElement.style.width = '';
+    touchState.value.draggedElement.style.zIndex = '';
+    touchState.value.draggedElement.style.left = '';
+    touchState.value.draggedElement.style.top = '';
+    touchState.value.draggedElement.style.transform = '';
+  }
+  
+  touchState.value = {
+    startX: 0,
+    startY: 0,
+    startTime: 0,
+    isDragging: false,
+    draggedPlayer: null,
+    draggedElement: null,
+    sourceComponent: null,
+    elementX: 0,
+    elementY: 0,
+    elementWidth: 0
+  };
+};
+
+const handleToggleHidePlayerList = () => {
+  showAllPlayers.value = !showAllPlayers.value;
+};
+// Save state to localStorage when it changes
+watch(() => store.state, (newState) => {
+  localStorage.setItem('appState', JSON.stringify(newState));
+}, { deep: true });
+
+// Save settings when they change
+watch([maxTeams, maxPlayersPerTeam, balanceType], ([newMaxTeams, newMaxPlayersPerTeam, balanceType]) => {
+  localStorage.setItem('settings', JSON.stringify({
+    maxTeams: newMaxTeams,
+    maxPlayersPerTeam: newMaxPlayersPerTeam,
+    balanceType: balanceType
+  }));
+}, { deep: true });
+
+// Load saved state on mount
+onMounted(() => {
+  const savedSettings = localStorage.getItem('settings');
+  if (savedSettings) {
+    const settings = JSON.parse(savedSettings);
+    maxTeams.value = settings.maxTeams;
+    maxPlayersPerTeam.value = settings.maxPlayersPerTeam;
+    balanceType.value = settings.balanceType || 'Balanced but random';
+    store.dispatch('updateTeamsCount', settings.maxTeams);
+    store.dispatch('updatePlayersPerTeamCount', settings.maxPlayersPerTeam);
+  }
+  
+  const savedState = localStorage.getItem('appState');
+  if (savedState) {
+    const state = JSON.parse(savedState);
+    store.replaceState(state);
+  }
+  if(store.state.teams.length === 0) {
+    store.dispatch('createEmptyTeams', maxTeams.value);
+  }
 });
 </script>
 
@@ -86,21 +285,26 @@ export default defineComponent({
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
-  padding: 0 20px;
+  margin-top: 5px;
+  padding: 0 5px;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .container {
-  max-width: 800px;
+  width: 100%;
   margin: 0 auto;
-  padding: 20px;
+  padding: 5px;
   background-color: #f9f9f9;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
 }
 
 .controls {
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+  padding: 0 5px;
 }
 
 .add-button .generate-button {
@@ -115,8 +319,47 @@ export default defineComponent({
 
 .results-container {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: minmax(120px, 1fr) minmax(200px, 2fr);
+  gap: 10px;
+  margin-top: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.results-container-hidden {
+  display: block;
+  grid-template-columns: minmax(40px, 1fr) minmax(200px, 2fr);
+  gap: 10px;
+  margin-top: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.player-list, .team-results {
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  #app {
+    margin-top: 60px;
+    padding: 0 20px;
+  }
+
+  .container {
+    max-width: 1200px;
+    padding: 5px;
+  }
+
+  .controls {
+    margin-bottom: 20px;
+    padding: 0;
+  }
+
+  .results-container {
+    gap: 20px;
+    margin-top: 20px;
+  }
 }
 </style>

@@ -1,96 +1,124 @@
 <template>
   <div class="team-input">
-    <h2>Team Generation Settings</h2>
-    <div class="controls">
-      <label for="maxTeams">Max Teams:</label>
-      <input type="number" v-model.number="maxTeams" id="maxTeams" min="1" />
-
-      <label for="maxPlayers">Max Players per Team:</label>
-      <input type="number" v-model.number="maxPlayers" id="maxPlayers" min="1" />
-
-      <label for="teamBalance">Team Balance Type:</label>
-      <select v-model="balanceType" id="teamBalance">
-        <option value="Most balanced teams">Most balanced teams</option>
-        <option value="Balanced but random">Balanced but random</option>
-        <option value="Random">Random</option>
-      </select>
-    </div>
-
-    <textarea
-      v-model="localPlayerInput"
-      placeholder="Enter player names and attributes, one per line..."
-      rows="5"
-    ></textarea>
-    <div class="button-group">
-      <button @click="addPlayers" class="add-button">Add Players</button>
-      <button
-        @click="handleGenerateTeams"
-        :disabled="!canGenerateTeams"
-        class="generate-button"
-      >
-        Generate Teams
+    <div
+      class="header-row"
+      style="display: flex; align-items: center; justify-content: space-between;"
+    >
+      <h4>Team Generation Settings</h4>
+      <button class="button-show" @click="emit('toggle-settings')" style="margin-left: 1em;">
+        {{ props.showSettings ? 'Hide' : 'Show' }} Settings
       </button>
+    </div>
+    <div v-if="props.showSettings">
+      <div class="controls">
+        <label for="maxTeams">Max Teams:</label>
+        <input
+          type="number"
+          :value="props.maxTeams"
+          id="maxTeams"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          @input="onMaxTeamsInput"
+        />
+
+        <label for="maxPlayers">Max Players per Team:</label>
+        <input
+          type="number"
+          :value="props.maxPlayersPerTeam"
+          id="maxPlayers"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          @input="onMaxPlayersInput"
+        />
+
+        <label for="teamBalance">Team Balance Type:</label>
+        <select 
+          :value="props.balanceType" 
+          id="teamBalance"
+          @change="handleChangeBalanceType">
+          <option value="Balanced but random">Balanced but random</option>
+          <option value="Most balanced teams">Most balanced teams</option>
+          <option value="Not very balanced">Not very balanced</option>
+          <option value="Random">Random</option>
+        </select>
+      </div>
+       <label>Add New Players:</label>
+      <textarea
+        class="player-input"
+        v-model="localPlayerInput"
+        placeholder="Enter player names and attributes, one per line..."
+        rows="5"
+      ></textarea>
+      <div class="button-group">
+        <button class="button-primary" @click="handleAddPlayers">Add Players</button>
+        <button class="button-warn" @click="handleRemoveAllPlayers" >Delete All Players</button>
+      </div>
+    </div>
+    <div>
+      <div class="button-group">
+        <button
+          class="button-primary"
+          @click="handleGenerateTeams"
+          :disabled="!canGenerateTeams"
+        >
+          Generate Teams
+        </button>
+        <button class="button-primary" @click="handleResetTeams" >Reset Teams</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, watch } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
 import { Player } from '../types';
 
 export default defineComponent({
   name: 'TeamInput',
   props: {
-    modelValue: {
-      type: String,
-      required: true,
-      default: '',
-    },
     maxTeams: { type: Number, required: true },
     maxPlayersPerTeam: { type: Number, required: true },
     balanceType: { type: String, required: true },
+    showSettings: {
+      type: Boolean,
+      default: true,
+    },
   },
   emits: {
-    'update:modelValue': (value: string) => true,
-    'generate-teams': (payload: {
-      players: Player[];
-      maxTeams: number;
-      maxPlayersPerTeam: number;
-      balanceType: string;
-    }) => true,
+    'generate-teams': (balanceType: string) => true,
     'update:players': (players: Player[]) => true,
     'update:maxTeams': (value: number) => true,
     'update:maxPlayersPerTeam': (value: number) => true,
+    'reset-teams': () => true,
+    'remove-all-players': () => true,
+    'toggle-settings': () => true,
+    'change-balance-type': (value: string) => true,
   },
   setup(props, { emit }) {
-    const maxTeams = ref(props.maxTeams);
-    const maxPlayers = ref(props.maxPlayersPerTeam);
-    const balanceType = ref('Most balanced teams');
+    const balanceType = ref(props.balanceType);
     const localPlayerInput = ref('');
     const playerList = ref<Player[]>([]);
 
-    watch(maxTeams, (newValue) => {
-      emit('update:maxTeams', newValue);
-    });
+    const canGenerateTeams = computed(() => true);
 
-    watch(maxPlayers, (newValue) => {
-      emit('update:maxPlayersPerTeam', newValue);
-    });
-
-    const canGenerateTeams = computed(() => playerList.value.length > 0);
-
-    const addPlayers = () => {
+    const handleAddPlayers = () => {
+      playerList.value = [];
       const newPlayers = localPlayerInput.value
         .split('\n')
-        .filter(line => line.trim())
-        .map(line => {
+        .filter((line) => line.trim())
+        .map((line) => {
           const [name, ...attrs] = line.trim().split(',');
           return {
-            id: crypto.randomUUID(),
-            name,
+            id: Date.now() + Math.floor(Math.random() * 100000),
+            name: name,
             attributes: attrs.map(Number),
             selected: true,
-          };
+            assignedTeamId: null,
+          } as Player;
         });
       playerList.value.push(...newPlayers);
       localPlayerInput.value = '';
@@ -98,29 +126,65 @@ export default defineComponent({
     };
 
     const handleGenerateTeams = () => {
-      const selectedPlayers = playerList.value.filter(p => p.selected);
-      emit('generate-teams', {
-        players: selectedPlayers,
-        maxTeams: maxTeams.value,
-        maxPlayersPerTeam: maxPlayers.value,
-        balanceType: props.balanceType,
-      });
+      const selectedPlayers = playerList.value.filter((p) => p.selected);
+      emit('generate-teams', balanceType.value);
+    };
+
+    const handleResetTeams = () => {
+      emit('reset-teams');
+    };
+
+    const handleRemoveAllPlayers = () => {
+      emit('remove-all-players');
+    };
+
+    const handleChangeBalanceType = (event: Event) => {
+      const value = (event.target as HTMLSelectElement).value;
+      balanceType.value = value;
+      emit('change-balance-type', value);
+    };
+
+    const onMaxTeamsInput = (event: Event) => {
+      const value = Number((event.target as HTMLInputElement).value);
+      if (!isNaN(value)) {
+        emit('update:maxTeams', value);
+      }
+    };
+
+    const onMaxPlayersInput = (event: Event) => {
+      const value = Number((event.target as HTMLInputElement).value);
+      if (!isNaN(value)) {
+        emit('update:maxPlayersPerTeam', value);
+      }
     };
 
     return {
-      maxTeams,
-      maxPlayers,
       balanceType,
       localPlayerInput,
-      addPlayers,
+      handleAddPlayers,
+      handleResetTeams,
       handleGenerateTeams,
+      handleRemoveAllPlayers,
+      handleChangeBalanceType,
       canGenerateTeams,
+      props,
+      emit,
+      onMaxTeamsInput,
+      onMaxPlayersInput,
     };
   },
 });
 </script>
 
 <style scoped>
+.player-input {
+  width: 100%;
+  height: 100px;
+  margin: 10px 0px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
 .team-input {
   margin: 20px;
   text-align: left;
@@ -145,21 +209,54 @@ label {
   font-weight: bold;
 }
 
-button {
+.button-primary {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
   grid-column: 1 / -1;
   padding: 10px;
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 
-button:hover {
+.button-show {
+  min-width: 120px;
+  grid-column: 1 / -1;
+  padding: 10px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button-warn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+  grid-column: 1 / -1;
+  padding: 10px;
+  background-color: #bf0600b4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button-primary:hover {
   background-color: #45a049;
 }
 
-input[type="number"],
+input[type='number'],
 select {
   padding: 5px;
   border: 1px solid #ddd;
@@ -168,33 +265,9 @@ select {
 
 .button-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin: 10px 0;
-}
-
-.add-button, .generate-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.add-button {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.add-button:hover {
-  background-color: #45a049;
-}
-
-.generate-button {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.generate-button:hover {
-  background-color: #45a049;
 }
 
 .generate-button:disabled {
