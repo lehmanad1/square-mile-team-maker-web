@@ -5,7 +5,7 @@
       style="display: flex; align-items: center; justify-content: space-between;"
     >
       <h4>Team Generation Settings</h4>
-      <button @click="emit('toggle-settings')" style="margin-left: 1em;">
+      <button class="button-show" @click="emit('toggle-settings')" style="margin-left: 1em;">
         {{ props.showSettings ? 'Hide' : 'Show' }} Settings
       </button>
     </div>
@@ -46,26 +46,28 @@
           <option value="Random">Random</option>
         </select>
       </div>
-
+       <label>Add New Players:</label>
       <textarea
         class="player-input"
         v-model="localPlayerInput"
         placeholder="Enter player names and attributes, one per line..."
         rows="5"
       ></textarea>
-      <button @click="handleAddPlayers" class="add-button">Add Players</button>
+      <div class="button-group">
+        <button class="button-primary" @click="handleAddPlayers">Add Players</button>
+        <button class="button-warn" @click="handleRemoveAllPlayers" >Delete All Players</button>
+      </div>
     </div>
     <div>
       <div class="button-group">
-        <button @click="handleRemoveAllPlayers" class="add-button">Remove All Players</button>
-        <button @click="handleResetTeams" class="add-button">Reset Teams</button>
         <button
+          class="button-primary"
           @click="handleGenerateTeams"
           :disabled="!canGenerateTeams"
-          class="generate-button"
         >
           Generate Teams
         </button>
+        <button class="button-primary" @click="handleResetTeams" >Reset Teams</button>
       </div>
     </div>
   </div>
@@ -207,7 +209,13 @@ label {
   font-weight: bold;
 }
 
-button {
+.button-primary {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
   grid-column: 1 / -1;
   padding: 10px;
   background-color: #4caf50;
@@ -217,7 +225,34 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+.button-show {
+  min-width: 120px;
+  grid-column: 1 / -1;
+  padding: 10px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button-warn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+  grid-column: 1 / -1;
+  padding: 10px;
+  background-color: #bf0600b4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button-primary:hover {
   background-color: #45a049;
 }
 
@@ -233,16 +268,6 @@ select {
   flex-wrap: wrap;
   gap: 10px;
   margin: 10px 0;
-}
-
-.add-button,
-.generate-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  flex: 1;
-  min-width: 120px;
 }
 
 .generate-button:disabled {

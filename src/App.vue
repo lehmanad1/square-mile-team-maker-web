@@ -18,13 +18,15 @@
         />
       </div>
 
-      <div class="results-container">
+      <div :class="[{ 'results-container': showAllPlayers }, { 'results-container-hidden': !showAllPlayers }]">
         <PlayerList 
           class="player-list"
           :touch-state="touchState"
+          :show-player-list="showAllPlayers"
           @touch-start="handleTouchStart"
           @touch-move="handleTouchMove"
           @touch-end="handleTouchEnd"
+          @toggle-hide-player-list="handleToggleHidePlayerList"
         />
         <TeamResults 
           class="team-results"
@@ -56,6 +58,7 @@ const maxTeams = ref(5);
 const maxPlayersPerTeam = ref(8);
 const balanceType = ref('Balanced but random');
 const showSettings = ref(false);
+const showAllPlayers = ref(true);
 const addPlayer = (playerData: { name: string; attributes: number[] }, index: number) => {
   const player: Player = {
     id: index,
@@ -235,6 +238,9 @@ const handleTouchEnd = (event: TouchEvent) => {
   };
 };
 
+const handleToggleHidePlayerList = () => {
+  showAllPlayers.value = !showAllPlayers.value;
+};
 // Save state to localStorage when it changes
 watch(() => store.state, (newState) => {
   localStorage.setItem('appState', JSON.stringify(newState));
@@ -314,6 +320,16 @@ onMounted(() => {
 .results-container {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) minmax(200px, 2fr);
+  gap: 10px;
+  margin-top: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.results-container-hidden {
+  display: block;
+  grid-template-columns: minmax(40px, 1fr) minmax(200px, 2fr);
   gap: 10px;
   margin-top: 15px;
   width: 100%;

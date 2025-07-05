@@ -1,19 +1,24 @@
 <template>
   <div class="player-list">
-    <h2>All Players</h2>
-    <div class="player-container drop-zone" 
-         data-drop-zone="player-list"
-         @dragover.prevent 
-         @drop="handleDrop">
+    <div class="title-container">
+      <h2>Available Players</h2>
+      <button @click="emit('toggle-hide-player-list')" style="margin-left: 1em;">
+        {{ props.showPlayerList ? 'Hide' : 'Show' }}
+      </button>
+      </div>
+    <div v-if="props.showPlayerList" class="player-container drop-zone" 
+        data-drop-zone="player-list"
+        @dragover.prevent 
+        @drop="handleDrop">
       <div class="selection-container">
         <input type="checkbox" 
-               :checked="allSelectablePlayersSelected"
-               @change="toggleSelectAll" />
+              :checked="allSelectablePlayersSelected"
+              @change="toggleSelectAll" />
         <span>Select All</span>
       </div>
-      <div class="selection-container">
+      <div class="selection-container-end">
         <input type="checkbox"
-               @change="hideUnselectedPlayers" />
+              @change="hideUnselectedPlayers" />
         <span>Hide Unselected</span>
       </div>
       <div v-for="(player, index) in players">
@@ -52,15 +57,20 @@ const players = computed(() => store.state.players);
 const dropIndicator = ref<HTMLElement | null>(null);
 let dragIndex = -1;
 let hideSelected = ref(false);
+let showList = ref(true);
 
-defineProps({
+const props = defineProps({
   touchState: {
     type: Object,
     required: true
+  },
+  showPlayerList: {
+    type: Boolean,
+    default: true
   }
 });
 
-defineEmits(['touch-start', 'touch-move', 'touch-end']);
+const emit = defineEmits(['touch-start', 'touch-move', 'touch-end', 'toggle-hide-player-list']);
 
 const startDrag = (event: DragEvent, player: Player, index: number) => {
   if (player.assignedTeamId) return;
@@ -134,9 +144,28 @@ const toggleSelectAll = (event: Event) => {
 const hideUnselectedPlayers = (event: Event) => {
   hideSelected.value = (event.target as HTMLInputElement).checked;
 };
+
 </script>
 
 <style scoped>
+
+.title-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-left: 10px;
+}
+
+button {
+  grid-column: 1 / -1;
+  padding: 10px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 .player-list {
   border: 2px solid #ddd;
   border-radius: 8px;
@@ -271,6 +300,13 @@ h2 {
 }
 
 .selection-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.selection-container-end {
   display: flex;
   align-items: center;
   gap: 8px;
