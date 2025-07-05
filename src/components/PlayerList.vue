@@ -1,7 +1,7 @@
 <template>
   <div class="player-list">
     <div class="title-container">
-      <h2>Available Players</h2>
+      <h2>Available Players ({{ selectedPlayers.length }})</h2>
       <button @click="emit('toggle-hide-player-list')" style="margin-left: 1em;">
         {{ props.showPlayerList ? 'Hide' : 'Show' }}
       </button>
@@ -54,6 +54,7 @@ import { Player } from '../types';
 
 const store = useStore();
 const players = computed(() => store.state.players);
+const selectedPlayers = computed(() => store.state.players.filter(p => p.selected));
 const dropIndicator = ref<HTMLElement | null>(null);
 let dragIndex = -1;
 let hideSelected = ref(false);
